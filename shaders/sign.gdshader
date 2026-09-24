@@ -30,6 +30,6 @@ void fragment() {
 	float dist = length(wp - CAMERA_POSITION_WORLD);
 	col = mix(col, fog_color.rgb, smoothstep(fog_start, fog_end, dist) * 0.8);
 	float lum = dot(col, vec3(0.299, 0.587, 0.114));
-	col = mix(col, vec3(smoothstep(0.08, 0.7, lum)), noir);
+	col = mix(col, vec3(smoothstep(0.02, 0.8, lum)), noir);
 	ALBEDO = col;
 }

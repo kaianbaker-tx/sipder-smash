@@ -53,6 +53,9 @@ func _ready() -> void:
 	skeleton = inst.find_child("Skeleton3D", true, false)
 	mesh = inst.find_child("characterMedium", true, false)
 	material = Toon.unique_material(skin, {"character": 1.0})
+	var outline := ShaderMaterial.new()
+	outline.shader = preload("res://shaders/outline.gdshader")
+	material.next_pass = outline
 	mesh.material_override = material
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for b in ["LeftArm", "LeftForeArm", "RightArm", "RightForeArm", "LeftUpLeg", "LeftLeg", "RightUpLeg", "RightLeg", "Spine", "Chest", "Head", "Hips", "HipsCtrl", "LeftHand", "RightHand"]:

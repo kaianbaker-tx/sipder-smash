@@ -29,6 +29,7 @@ const SOUNDS := {
 	"chapter": "res://assets/sounds/chapter.wav",
 	"boss_roar": "res://assets/sounds/boss_roar.wav",
 	"cheer": "res://assets/sounds/cheer.wav",
+	"honk": "res://assets/sounds/honk.wav",
 }
 const MUSIC := {
 	"city": "res://assets/music/city_beat.wav",
@@ -42,6 +43,7 @@ var _next := 0
 var _music: AudioStreamPlayer
 var _music_name := ""
 var muted := false
+var _wind: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -57,6 +59,26 @@ func _ready() -> void:
 	_music = AudioStreamPlayer.new()
 	_music.volume_db = -7.0
 	add_child(_music)
+	_wind = AudioStreamPlayer.new()
+	if ResourceLoader.exists("res://assets/sounds/wind.wav"):
+		var w: AudioStreamWAV = load("res://assets/sounds/wind.wav")
+		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		w.loop_end = int(w.get_length() * w.mix_rate)
+		_wind.stream = w
+	_wind.volume_db = -60.0
+	add_child(_wind)
+
+
+## Rushing air when the hero moves fast (0..1).
+func set_wind(amount: float) -> void:
+	if not _wind.stream:
+		return
+	if amount > 0.02 and not _wind.playing:
+		_wind.play()
+	_wind.volume_db = lerpf(-40.0, -6.0, clampf(amount, 0.0, 1.0))
+	_wind.pitch_scale = 0.8 + amount * 0.5
+	if amount <= 0.02 and _wind.playing:
+		_wind.stop()
 
 
 func play(name: String, pitch_var := 0.0, volume_db := 0.0) -> void:

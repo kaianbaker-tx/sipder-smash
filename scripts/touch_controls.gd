@@ -11,6 +11,7 @@ var _look_last := Vector2.ZERO
 var _buttons := {}           # action -> {pos, r, label, id}
 var _draw: Control
 var pause_pressed: Callable
+var cover_pressed: Callable
 
 
 func _ready() -> void:
@@ -33,7 +34,8 @@ func _layout() -> void:
 		"smash": {"pos": base + Vector2(-20, -160) * s, "r": 56 * s, "label": "SMASH"},
 		"web": {"pos": base + Vector2(-160, -175) * s, "r": 44 * s, "label": "WEB"},
 		"zip": {"pos": base + Vector2(-270, -80) * s, "r": 42 * s, "label": "ZIP"},
-		"pause": {"pos": Vector2(vp.x * 0.5, 44 * s), "r": 30 * s, "label": "II"},
+		"pause": {"pos": Vector2(vp.x * 0.5 - 40 * s, 44 * s), "r": 30 * s, "label": "II"},
+		"cover": {"pos": Vector2(vp.x * 0.5 + 40 * s, 44 * s), "r": 30 * s, "label": "PIC"},
 	}
 	_stick_center = Vector2(150 * s, vp.y - 150 * s)
 
@@ -56,6 +58,9 @@ func _input(event: InputEvent) -> void:
 					if a == "pause":
 						if pause_pressed.is_valid():
 							pause_pressed.call()
+					elif a == "cover":
+						if cover_pressed.is_valid():
+							cover_pressed.call()
 					else:
 						Input.action_press(a)
 					get_viewport().set_input_as_handled()
@@ -72,7 +77,7 @@ func _input(event: InputEvent) -> void:
 				var b: Dictionary = _buttons[a]
 				if b.get("id", -2) == e.index:
 					b["id"] = -2
-					if a != "pause":
+					if a != "pause" and a != "cover":
 						Input.action_release(a)
 			if e.index == _stick_id:
 				_stick_id = -1

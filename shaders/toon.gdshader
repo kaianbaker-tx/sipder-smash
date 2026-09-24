@@ -83,8 +83,16 @@ float hatch(vec2 frag, float size, float amount) {
 
 void fragment() {
 	vec3 tex = texture(albedo_tex, UV).rgb;
-	float mx0 = max(tex.r, max(tex.g, tex.b));
-	float mn0 = min(tex.r, min(tex.g, tex.b));
+	// Kenney colour maps are a grid of gradient swatches (16 x 4 on the city
+	// kits). Decide "window" / "wall" from the swatch centre so a gradient
+	// never flips the decision half way across a pane.
+	vec3 sw = tex;
+	if (windows > 0.5) {
+		vec2 cell_uv = (floor(UV * vec2(16.0, 4.0)) + 0.5) / vec2(16.0, 4.0);
+		sw = textureLod(albedo_tex, cell_uv, 0.0).rgb;
+	}
+	float mx0 = max(sw.r, max(sw.g, sw.b));
+	float mn0 = min(sw.r, min(sw.g, sw.b));
 	float sat0 = (mx0 - mn0) / max(mx0, 0.001);
 	vec3 N = normalize(world_nrm);
 	vec3 V = normalize(CAMERA_POSITION_WORLD - world_pos);
@@ -96,7 +104,7 @@ void fragment() {
 	// --- windows: reflect the dusk sky, some glow warm -----------------------
 	float is_window = 0.0;
 	if (windows > 0.5) {
-		is_window = step(0.3, sat0) * step(tex.r * 1.15, tex.b) * step(tex.g, tex.b) * step(0.35, tex.b);
+		is_window = step(0.25, sat0) * step(sw.r * 1.15, sw.b) * step(sw.g, sw.b) * step(0.35, sw.b);
 		is_window *= step(abs(N.y), 0.5);
 	}
 
@@ -171,7 +179,9 @@ void fragment() {
 
 	// noir mode: black and white comic
 	float lum = dot(col, vec3(0.299, 0.587, 0.114));
-	col = mix(col, vec3(smoothstep(0.08, 0.7, lum)), noir);
+	col = mix(col, vec3(smoothstep(0.02, 0.8, lum)), noir);
+	// noir heroes get a bright white rim so they never vanish in the dark
+	col += vec3(1.0) * smoothstep(0.3, 0.45, fres) * character * noir * 0.8;
 
 	ALBEDO = col;
 }

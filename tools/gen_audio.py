@@ -234,6 +234,24 @@ def sfx():
         x[s:s + len(c)] += c[:len(x) - s]
     save("cheer", x, peak=0.6)
 
+    # WIND: seamless 2 s loop of rushing air
+    d = 2.0
+    n = noise(d + 0.5)
+    x = bp(n, 250, 2200)[int(0.5 * SR):]
+    t = t_(d)
+    x *= 0.75 + 0.25 * np.sin(2 * np.pi * 0.5 * t)
+    f = int(0.2 * SR)
+    x[:f] = x[:f] * np.linspace(0, 1, f) + x[-f:] * np.linspace(1, 0, f)
+    x = x[:len(x) - f]
+    save("wind", x, peak=0.5)
+
+    # HONK: a two-tone taxi horn
+    d = 0.45
+    t = t_(d)
+    x = (signal.square(2 * np.pi * 415 * t) + signal.square(2 * np.pi * 523 * t)) * 0.5
+    x = lp(x, 2500) * np.minimum(1, t / 0.01) * np.minimum(1, (d - t) / 0.05)
+    save("honk", x, peak=0.6)
+
 
 # ---------------------------------------------------------------- music
 

@@ -95,7 +95,7 @@ func _ready() -> void:
 	ti.custom_minimum_size = Vector2(36, 36)
 	ti.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tk.add_child(ti)
-	_tokens = _label("0", BANGERS, 34, Color(1, 1, 1), 9)
+	_tokens = _label("0/%d" % Game.token_total, BANGERS, 34, Color(1, 1, 1), 9)
 	tk.add_child(_tokens)
 
 	# combo
@@ -184,7 +184,7 @@ func _ready() -> void:
 	_root.add_child(_click)
 
 	Game.score_changed.connect(_on_score)
-	Game.tokens_changed.connect(func(t: int) -> void: _tokens.text = str(t); _pop(_tokens))
+	Game.tokens_changed.connect(func(t: int) -> void: _tokens.text = "%d/%d" % [t, Game.token_total]; _pop(_tokens))
 	Game.combo_changed.connect(_on_combo)
 	Game.message.connect(show_message)
 
@@ -311,12 +311,17 @@ func set_boss(b: Node3D) -> void:
 	_boss_box.visible = b != null
 
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and _hint.visible:
+		_hint.visible = false
+
+
 func set_hint_visible(v: bool) -> void:
 	if Game.touch_mode:
 		_hint.visible = false
 		return
 	_hint.visible = v
-	_hint.text = "RIGHT MOUSE / SHIFT: SWING    SPACE: JUMP (x2 FLIP)\nLEFT CLICK: SMASH    F: WEB SHOT    E: WEB ZIP\nRUN INTO WALLS TO CLIMB    H: HIDE HELP"
+	_hint.text = "RIGHT MOUSE / SHIFT: SWING    SPACE: JUMP (x2 FLIP)\nLEFT CLICK: SMASH    F: WEB SHOT    E: WEB ZIP\nRUN INTO WALLS TO CLIMB    C: COMIC COVER    H: HIDE HELP"
 
 
 ## A full-screen comic chapter card.

@@ -5,6 +5,7 @@ extends Node3D
 const TEX := preload("res://assets/ui/token.png")
 
 var tokens: Array[Sprite3D] = []
+var total := 0
 var player: Player
 var _t := 0.0
 
@@ -42,6 +43,8 @@ func _add(p: Vector3) -> void:
 	s.set_meta("base", p)
 	add_child(s)
 	tokens.append(s)
+	total += 1
+	Game.token_total = total
 
 
 func _process(delta: float) -> void:

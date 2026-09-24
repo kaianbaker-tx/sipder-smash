@@ -41,6 +41,7 @@ func _ready() -> void:
 	_build_signs()
 	_flush_multimeshes()
 	_build_lamp_glows()
+	_build_steam()
 
 
 # --------------------------------------------------------------------------- utils
@@ -578,6 +579,65 @@ func _build_signs() -> void:
 		var fmi := MultiMeshInstance3D.new()
 		fmi.multimesh = fm
 		add_child(fmi)
+
+
+# --------------------------------------------------------------------------- steam
+
+func _build_steam() -> void:
+	# manhole covers puffing comic steam clouds
+	var cover_img := Image.create(4, 4, false, Image.FORMAT_RGB8)
+	cover_img.fill(Color(0.25, 0.2, 0.32))
+	var cover_mat := Toon.material(ImageTexture.create_from_image(cover_img))
+	var puff_mat := StandardMaterial3D.new()
+	puff_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	puff_mat.vertex_color_use_as_albedo = true
+	var puff := SphereMesh.new()
+	puff.radius = 0.7
+	puff.height = 1.4
+	puff.radial_segments = 8
+	puff.rings = 4
+	puff.material = puff_mat
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 0.3))
+	curve.add_point(Vector2(0.4, 1.0))
+	curve.add_point(Vector2(1.0, 0.0))
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1.0, 0.95, 1.0))
+	grad.set_color(1, Color(0.8, 0.7, 0.95))
+	for k in 16:
+		var ri := rng.randi_range(-3, 3) * 4
+		var along := rng.randi_range(-11, 11)
+		if is_road(along):
+			along += 1
+		var p := cell_pos(ri, along) if k % 2 == 0 else cell_pos(along, ri)
+		p += Vector3(rng.randf_range(-2.5, 2.5), GROUND_Y, rng.randf_range(-2.5, 2.5)) * Vector3(1, 1, 1)
+		var cover := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.9
+		cyl.bottom_radius = 0.9
+		cyl.height = 0.08
+		cyl.radial_segments = 16
+		cover.mesh = cyl
+		cover.material_override = cover_mat
+		cover.position = p + Vector3(0, 0.02, 0)
+		add_child(cover)
+		var ps := CPUParticles3D.new()
+		ps.mesh = puff
+		ps.amount = 10
+		ps.lifetime = 3.2
+		ps.preprocess = 3.0
+		ps.direction = Vector3.UP
+		ps.spread = 12.0
+		ps.initial_velocity_min = 1.5
+		ps.initial_velocity_max = 2.6
+		ps.gravity = Vector3(0.4, 0.2, 0)
+		ps.scale_amount_min = 0.8
+		ps.scale_amount_max = 1.8
+		ps.scale_amount_curve = curve
+		ps.color_ramp = grad
+		ps.visibility_range_end = 160.0
+		ps.position = p
+		add_child(ps)
 
 
 # --------------------------------------------------------------------------- lamp glows

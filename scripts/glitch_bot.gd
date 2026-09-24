@@ -79,7 +79,9 @@ func _physics_process(delta: float) -> void:
 			return
 	var to_p := player.center() - global_position
 	var dist := to_p.length()
-	_awake = _awake or dist < aggro_range
+	if not _awake and dist < aggro_range:
+		_awake = true
+		Fx.word("!", global_position + Vector3(0, 2.5, 0), "small", Color(1, 0.9, 0.2))
 	# flicker
 	_glitch_t -= delta
 	if _glitch_t <= 0.0:

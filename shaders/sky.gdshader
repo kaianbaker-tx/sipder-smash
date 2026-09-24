@@ -126,6 +126,6 @@ void sky() {
 	col = mix(col, fog_color.rgb, smoothstep(0.0, -0.08, y));
 
 	float lum = dot(col, vec3(0.299, 0.587, 0.114));
-	col = mix(col, vec3(smoothstep(0.08, 0.7, lum)), noir);
+	col = mix(col, vec3(smoothstep(0.02, 0.8, lum)), noir);
 	COLOR = col;
 }

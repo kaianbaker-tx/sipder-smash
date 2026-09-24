@@ -20,6 +20,7 @@ var score := 0
 var combo := 0
 var best_combo := 0
 var tokens := 0
+var token_total := 0
 var bots_smashed := 0
 var suit := "classic"
 var gold_unlocked := false
@@ -40,7 +41,8 @@ func _ready() -> void:
 			args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	_setup_input()
 	_load()
-	if DisplayServer.is_touchscreen_available() and not OS.has_feature("pc"):
+	# phones and tablets start in touch mode; laptops switch on first touch
+	if OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile"):
 		enable_touch()
 
 
@@ -93,6 +95,7 @@ func _setup_input() -> void:
 	_key("zip", [KEY_E, KEY_L])
 	_key("pause", [KEY_ESCAPE, KEY_P])
 	_key("ui_help", [KEY_H])
+	_key("cover", [KEY_C])
 	_key("cam_left", [])
 	_key("cam_right", [])
 	_key("cam_up", [])
@@ -115,6 +118,7 @@ func _setup_input() -> void:
 	_pad_button("zip", JOY_BUTTON_LEFT_SHOULDER)
 	_pad_button("swing", JOY_BUTTON_RIGHT_SHOULDER)
 	_pad_button("pause", JOY_BUTTON_START)
+	_pad_button("cover", JOY_BUTTON_BACK)
 
 
 func reset_run() -> void:

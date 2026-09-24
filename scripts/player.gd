@@ -269,6 +269,12 @@ func _air(delta: float) -> void:
 
 func _land() -> void:
 	var hard := _fall_peak < -26.0
+	for i in get_slide_collision_count():
+		var col := get_slide_collision(i)
+		if col.get_collider() is AnimatableBody3D and col.get_normal().y > 0.6:
+			Sfx.play("honk", 0.08)
+			Fx.word("HONK!", global_position + Vector3(0, 1.5, 0), "small", Color(1, 0.9, 0.2))
+			break
 	_fall_peak = 0.0
 	_set_state(State.GROUND)
 	model.spread = 0.0
@@ -314,9 +320,12 @@ func find_anchor() -> Dictionary:
 			var d := p.distance_to(pos)
 			var flat := Vector3(p.x - pos.x, 0, p.z - pos.z)
 			var ahead := flat.dot(fwd)
-			var score := minf(h, 30.0) + dir.dot(fwd) * 10.0 - absf(d - 26.0) * 0.35 - absf(side) * 2.0
+			var score := minf(h, 30.0) + dir.dot(fwd) * 10.0 - absf(d - 26.0) * 0.35 - absf(side) * 1.0
 			if ahead < 6.0:
 				score -= (6.0 - ahead) * 4.0
+			# a wall that faces us head-on means we'd swing straight into it
+			var n: Vector3 = hit.normal
+			score -= maxf(0.0, n.dot(-fwd)) * 9.0 * (1.0 if absf(side) < 0.3 else 0.4)
 			if score > best_score:
 				best_score = score
 				best = {"pos": p + (hit.normal as Vector3) * 0.3, "sky": false}

@@ -13,6 +13,7 @@ var shot_times := []
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	process_priority = -100
 	script_name = Game.args.get("autoplay", "swing")
 	if Game.args.has("shots"):
 		shots_dir = Game.args["shots"]
@@ -61,6 +62,12 @@ func _ready() -> void:
 			while k < secs:
 				shot_times.append(k)
 				k += every
+		"cover":
+			timeline = [[2.0, "tap", "cover"], [4.0, "quit", ""]]
+			shot_times = [3.5]
+		"pause":
+			timeline = [[1.0, "tap", "pause"], [3.0, "quit", ""]]
+			shot_times = [2.5]
 		"title":
 			timeline = [[4.0, "quit", ""]]
 			shot_times = [1.5, 3.5]

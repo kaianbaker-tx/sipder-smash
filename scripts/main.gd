@@ -18,6 +18,7 @@ var menus: CanvasLayer
 var touch: CanvasLayer
 var title_cam: Camera3D
 var boss: GlitchKing
+var cover: CanvasLayer
 
 var mode := Mode.TITLE
 var chapter := 0
@@ -60,7 +61,7 @@ func _ready() -> void:
 	portal = load("res://scripts/portal.gd").new()
 	portal.name = "Portal"
 	add_child(portal)
-	portal.global_position = city.tower_top + Vector3(0, 95, 0)
+	portal.global_position = city.tower_top + Vector3(0, 60, 0)
 	RenderingServer.global_shader_parameter_set("portal_power", 0.0)
 
 	player = Player.new()
@@ -79,6 +80,7 @@ func _ready() -> void:
 
 	hud = Hud.new()
 	add_child(hud)
+	Game.tokens_changed.emit(Game.tokens)
 	hud.bind(player, rig)
 	menus = load("res://scripts/menus.gd").new()
 	add_child(menus)
@@ -89,6 +91,10 @@ func _ready() -> void:
 	add_child(touch)
 	touch.rig = rig
 	touch.pause_pressed = func() -> void: _set_paused(true)
+	touch.cover_pressed = func() -> void: _open_cover()
+	cover = load("res://scripts/cover_mode.gd").new()
+	add_child(cover)
+	cover.closed.connect(_close_cover)
 	title_ui = load("res://scripts/title_ui.gd").new()
 	add_child(title_ui)
 	title_ui.play_pressed.connect(_start_game)
@@ -98,6 +104,11 @@ func _ready() -> void:
 	Game.suit_changed.connect(func(s: String) -> void: look.set_noir(s == "noir"))
 	player.knocked_out.connect(func() -> void: Game.end_combo())
 
+	if Game.args.has("suit"):
+		Game.suit = Game.args.suit
+	if Game.args.has("touch"):
+		Game.enable_touch()
+		touch.visible = true
 	if Game.args.has("autoplay"):
 		var ap: Node = load("res://tools/autoplay.gd").new()
 		ap.main = self
@@ -127,7 +138,7 @@ func _pick_title_spot() -> void:
 		if top < 28.0 or top > 70.0:
 			continue
 		var d := (info.pos as Vector3).distance_to(city.tower_pos)
-		if d < 60.0 or d > 140.0:
+		if d < 110.0 or d > 190.0:
 			continue
 		if d < bd:
 			bd = d
@@ -150,6 +161,7 @@ func _pick_title_spot() -> void:
 
 func _to_title() -> void:
 	mode = Mode.TITLE
+	Sfx.set_wind(0.0)
 	Game.playing = false
 	get_tree().paused = false
 	Engine.time_scale = 1.0
@@ -193,6 +205,7 @@ func _start_game() -> void:
 	title_ui.visible = false
 	hud.visible = true
 	player.model.set_skin(Game.suit_texture())
+	look.set_noir(Game.suit == "noir")
 	player.enabled = true
 	player.respawn(_title_spot - _title_look * 2.0 + Vector3(0, 0.5, 0))
 	player.invuln = 0.0
@@ -262,9 +275,12 @@ func _process(delta: float) -> void:
 	if mode != Mode.PLAY:
 		return
 	look.speed = clampf((player.velocity.length() - 24.0) / 22.0, 0.0, 1.0)
+	Sfx.set_wind(clampf((player.velocity.length() - 12.0) / 30.0, 0.0, 1.0) if not get_tree().paused else 0.0)
 	_play_time += delta
 	if Input.is_action_just_pressed("pause") or (menus.is_paused_open() and Input.is_action_just_pressed("ui_cancel")):
 		_set_paused(not get_tree().paused)
+	if Input.is_action_just_pressed("cover") and not get_tree().paused:
+		_open_cover()
 	# count swings / zips for the tutorial
 	if player.state != _last_state:
 		if player.state == Player.State.SWING:
@@ -438,6 +454,21 @@ func _set_paused(p: bool) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	else:
 		_capture()
+
+
+func _open_cover() -> void:
+	get_tree().paused = true
+	Engine.time_scale = 1.0
+	hud.visible = false
+	touch.visible = false
+	cover.open()
+
+
+func _close_cover() -> void:
+	hud.visible = true
+	touch.visible = Game.touch_mode
+	get_tree().paused = false
+	_capture()
 
 
 func _resume() -> void:

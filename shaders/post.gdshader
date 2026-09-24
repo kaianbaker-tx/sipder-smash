@@ -16,8 +16,8 @@ uniform float edge_depth = 0.035;
 uniform float edge_crease = 0.012;
 uniform vec4 ink : source_color = vec4(0.06, 0.02, 0.1, 1.0);
 uniform float ca_base = 0.9;
-uniform float ca_far = 3.0;
-uniform float focus_dist = 70.0;
+uniform float ca_far = 2.0;
+uniform float focus_dist = 90.0;
 uniform float speed = 0.0;
 uniform float impact = 0.0;
 uniform float glitch = 0.0;
@@ -120,7 +120,7 @@ void fragment() {
 
 	// noir mode
 	float lum3 = dot(col, vec3(0.299, 0.587, 0.114));
-	col = mix(col, vec3(smoothstep(0.1, 0.75, lum3)), noir);
+	col = mix(col, vec3(smoothstep(0.03, 0.85, lum3)), noir);
 
 	col = mix(col, vec3(0.03, 0.0, 0.05), fade);
 	ALBEDO = col;

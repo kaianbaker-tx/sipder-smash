@@ -7,6 +7,7 @@ var _to := Vector3.ZERO
 var _grow := 1.0
 var _active := false
 var _im: ImmediateMesh
+var _splat: Sprite3D
 
 
 func _ready() -> void:
@@ -20,6 +21,14 @@ func _ready() -> void:
 	material_override = m
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	extra_cull_margin = 1000.0
+	_splat = Sprite3D.new()
+	_splat.texture = preload("res://assets/ui/web_splat.png")
+	_splat.pixel_size = 0.018
+	_splat.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_splat.shaded = false
+	_splat.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+	_splat.visible = false
+	add_child(_splat)
 
 
 func shoot(from: Vector3, to: Vector3) -> void:
@@ -38,12 +47,15 @@ func update_ends(from: Vector3, to: Vector3) -> void:
 func release() -> void:
 	_active = false
 	visible = false
+	_splat.visible = false
 
 
 func _process(delta: float) -> void:
 	if not _active:
 		return
 	_grow = minf(1.0, _grow + delta * 9.0)
+	_splat.visible = _grow >= 1.0
+	_splat.global_position = _to
 	var cam := get_viewport().get_camera_3d()
 	if not cam:
 		return
