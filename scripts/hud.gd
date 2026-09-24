@@ -37,6 +37,7 @@ var _click: Label
 var _card: Control
 var _root: Control
 var _race: Label
+var _rotate: Label
 
 
 func _ready() -> void:
@@ -185,6 +186,14 @@ func _ready() -> void:
 	_race.custom_minimum_size = Vector2(400, 0)
 	_race.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(_race)
+
+	_rotate = _label("TURN YOUR PHONE SIDEWAYS!", BANGERS, 40, Color(1, 0.9, 0.2), 12)
+	_rotate.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_rotate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rotate.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_rotate.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_rotate.visible = false
+	_root.add_child(_rotate)
 
 	_click = _label("CLICK TO PLAY!", BANGERS, 44, Color(1, 1, 1), 12)
 	_click.set_anchors_preset(Control.PRESET_CENTER)
@@ -395,6 +404,8 @@ func _process(delta: float) -> void:
 		_boss_bar.value = boss.hp
 	elif _boss_box.visible:
 		_boss_box.visible = false
+	var vs := get_viewport().get_visible_rect().size
+	_rotate.visible = Game.touch_mode and vs.y > vs.x
 	_click.visible = Game.playing and not Game.touch_mode and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not get_tree().paused
 	if Input.is_action_just_pressed("ui_help"):
 		set_hint_visible(not _hint.visible)

@@ -72,6 +72,8 @@ func _ready() -> void:
 	hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	hint.position = Vector2(-280, -50)
 	root.add_child(hint)
+	if Game.touch_mode:
+		hint.text = "TAP PLAY!"
 	var tw2 := hint.create_tween().set_loops()
 	tw2.tween_property(hint, "modulate:a", 0.3, 0.6)
 	tw2.tween_property(hint, "modulate:a", 1.0, 0.6)
