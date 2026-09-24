@@ -346,14 +346,14 @@ def pad(freqs, dur):
 def beat_city():
     bpm = 90
     beat = 60 / bpm
-    bars = 8
+    bars = 16
     dur = bars * 4 * beat
     mix = np.zeros(int(SR * dur) + SR)
     drums = np.zeros_like(mix)
     swing = 0.06
-    # chord roots: Am  F  C  G  (x2)
-    roots = [57, 53, 48, 55] * 2
-    chords = {57: [57, 60, 64], 53: [53, 57, 60], 48: [48, 52, 55], 55: [55, 59, 62]}
+    # chord roots: A section Am F C G (x2), B section Dm Am F E (x2)
+    roots = [57, 53, 48, 55] * 2 + [50, 57, 53, 52] * 2
+    chords = {57: [57, 60, 64], 53: [53, 57, 60], 48: [48, 52, 55], 55: [55, 59, 62], 50: [50, 53, 57], 52: [52, 56, 59]}
     for bar in range(bars):
         b0 = bar * 4 * beat
         # boom-bap kick pattern
@@ -378,6 +378,9 @@ def beat_city():
         hook = [(0, 76), (0.5, 74), (0.75, 72), (1.5, 69), (2.5, 72), (3.0, 74), (3.25, 76)]
         if bar % 2 == 1:
             hook = [(0, 79), (0.5, 76), (1.0, 74), (1.5, 72), (2.0, 74), (3.0, 69)]
+        if bar >= 8:
+            # B section: a call-and-response riff an octave up
+            hook = [(0, 81), (0.25, 79), (0.5, 76), (1.5, 74), (2.0, 76), (2.75, 81)] if bar % 2 == 0 else [(0.5, 84), (1.0, 81), (1.5, 79), (2.5, 76), (3.0, 74)]
         for (o, n) in hook:
             place(mix, pluck(note_f(n), beat * 0.45, 2600) * 0.16, b0 + o * beat)
         # record scratch every 4 bars
@@ -394,10 +397,10 @@ def beat_city():
 def beat_boss():
     bpm = 140
     beat = 60 / bpm
-    bars = 8
+    bars = 16
     dur = bars * 4 * beat
     mix = np.zeros(int(SR * dur) + SR)
-    roots = [45, 45, 46, 43] * 2  # A A Bb G, dark
+    roots = [45, 45, 46, 43] * 2 + [41, 43, 45, 44] * 2  # A A Bb G, then F G A G#
     for bar in range(bars):
         b0 = bar * 4 * beat
         for k in [0, 0.75, 2.5, 3.0] if bar % 2 == 0 else [0, 1.5, 2.25, 3.5]:

@@ -135,6 +135,24 @@ func _ready() -> void:
 			_start_game()
 			if Game.args.has("chapter"):
 				_skip_to(Game.args.chapter.to_int())
+			if Game.args.autoplay == "race":
+				hud._captions.clear()
+				_chapter_wait = 0.0
+				player.respawn(race.start_ring.global_position + Vector3(0, -1, 0))
+				var d: Vector3 = race.rings[0].global_position - race.start_ring.global_position
+				rig.yaw = atan2(-d.x, -d.z)
+				rig.pitch = -0.1
+			if Game.args.autoplay == "slam":
+				hud._captions.clear()
+				_chapter_wait = 0.0
+				player.respawn(Vector3(8, 70, 30))
+				rig.yaw = 0.0
+				rig.pitch = -0.9
+				for i in 3:
+					var b := GlitchBot.new()
+					add_child(b)
+					b.global_position = Vector3(4 + i * 4, 4, 30 - i * 3)
+					b.home = b.global_position
 	else:
 		_to_title()
 
@@ -500,7 +518,7 @@ func _keep_playing() -> void:
 	chapter = 99
 	Sfx.music("city")
 	_capture()
-	hud.narrate(["The city is yours. Swing free, find every token!"], 3.0)
+	hud.narrate(["The city is yours. Swing free, find every token!", "Try RING RUSH: fly through the pink ring over the park!"], 3.0)
 
 
 # ------------------------------------------------------------------ pause / input

@@ -700,8 +700,9 @@ func _slam(_delta: float) -> void:
 		Sfx.play("punch_big", 0.05)
 		for e in get_tree().get_nodes_in_group("enemies"):
 			var en := e as Node3D
-			var d := en.global_position.distance_to(p)
-			if d < 14.0 and en.has_method("take_hit"):
+			var off := en.global_position - p
+			var flat := Vector2(off.x, off.z).length()
+			if flat < 18.0 and off.y < 26.0 and en.has_method("take_hit"):
 				en.take_hit(2, (en.global_position - p).normalized() + Vector3.UP, true)
 				Game.add_combo()
 				Game.add_score(40)

@@ -121,7 +121,7 @@ func _build_suits(root: Control) -> void:
 func _build_help(root: Control) -> void:
 	_help = UiKit.panel(Color(1, 0.95, 0.8))
 	_help.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	_help.position = Vector2(-640, -250)
+	_help.position = Vector2(-640, -300)
 	_help.custom_minimum_size = Vector2(600, 0)
 	_help.visible = false
 	root.add_child(_help)
@@ -138,6 +138,8 @@ func _build_help(root: Control) -> void:
 		["WEB SHOT", "F / K  (sticks bots in place)"],
 		["WEB ZIP", "E / L  (zip where you aim)"],
 		["CLIMB", "run into any wall"],
+		["SLAM", "SMASH while falling from high up!"],
+		["COVER", "C = freeze it as a comic cover"],
 		["PAUSE", "ESC / P"],
 	]
 	for l in lines:
@@ -147,7 +149,7 @@ func _build_help(root: Control) -> void:
 		h.add_child(a)
 		h.add_child(UiKit.label(l[1], 22, Color(0.1, 0.02, 0.15), UiKit.LUCKY, 0))
 		v.add_child(h)
-	v.add_child(UiKit.label("Smash the Glitch-Bots, grab spider tokens,\nand beat THE GLITCH KING!", 22, Color(1, 0.3, 0.55), UiKit.LUCKY, 0))
+	v.add_child(UiKit.label("Smash the Glitch-Bots, grab spider tokens,\nbeat THE GLITCH KING, and fly through the pink\nring over the park for RING RUSH!", 20, Color(1, 0.3, 0.55), UiKit.LUCKY, 0))
 
 
 func _toggle_suits() -> void:

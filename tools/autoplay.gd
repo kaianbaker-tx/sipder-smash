@@ -63,11 +63,11 @@ func _ready() -> void:
 				shot_times.append(k)
 				k += every
 		"race":
-			timeline = [[0.5, "press", "move_forward"], [30.0, "quit", ""]]
-			shot_times = [2.0, 6.0, 10.0, 16.0, 24.0]
+			timeline = [[0.2, "press", "swing"], [1.4, "release", "swing"], [1.6, "press", "swing"], [2.8, "release", "swing"], [4.0, "quit", ""]]
+			shot_times = [0.6, 1.5, 3.0]
 		"slam":
-			timeline = [[0.3, "press", "move_forward"], [0.6, "press", "jump"], [0.7, "release", "jump"], [1.0, "press", "swing"], [2.2, "release", "swing"], [2.3, "release", "move_forward"], [2.6, "tap", "smash"], [6.0, "quit", ""]]
-			shot_times = [2.7, 3.0, 3.3, 3.6, 4.5]
+			timeline = [[0.4, "tap", "smash"], [4.0, "quit", ""]]
+			shot_times = [0.5, 0.9, 1.3, 1.5, 1.8, 2.5]
 		"boss":
 			timeline = [[9.0, "quit", ""]]
 			shot_times = [3.0, 3.6, 4.4, 6.0, 8.0]

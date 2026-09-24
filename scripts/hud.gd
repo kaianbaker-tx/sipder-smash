@@ -179,8 +179,8 @@ func _ready() -> void:
 	set_hint_visible(true)
 
 	_race = _label("", BANGERS, 40, Color(1, 0.9, 0.2), 12)
-	_race.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_race.position = Vector2(-200, 180)
+	_race.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_race.position = Vector2(-200, -200)
 	_race.custom_minimum_size = Vector2(400, 0)
 	_race.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_root.add_child(_race)
