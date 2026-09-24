@@ -40,7 +40,17 @@ func _ready() -> void:
 			args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	_setup_input()
 	_load()
-	touch_mode = DisplayServer.is_touchscreen_available() and not OS.has_feature("pc")
+	if DisplayServer.is_touchscreen_available() and not OS.has_feature("pc"):
+		enable_touch()
+
+
+## Phones and tablets: taps must not count as mouse punches.
+func enable_touch() -> void:
+	touch_mode = true
+	for a in ["smash", "swing"]:
+		for e in InputMap.action_get_events(a):
+			if e is InputEventMouseButton:
+				InputMap.action_erase_event(a, e)
 
 
 func _key(action: String, keys: Array) -> void:
@@ -82,6 +92,7 @@ func _setup_input() -> void:
 	_key("web", [KEY_F, KEY_K])
 	_key("zip", [KEY_E, KEY_L])
 	_key("pause", [KEY_ESCAPE, KEY_P])
+	_key("ui_help", [KEY_H])
 	_key("cam_left", [])
 	_key("cam_right", [])
 	_key("cam_up", [])

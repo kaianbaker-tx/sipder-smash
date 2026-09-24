@@ -494,13 +494,13 @@ func _start_zip() -> void:
 	var from := cam.global_position
 	var dir := -cam.global_transform.basis.z
 	# enemies near the aim line get a web-strike
-	var enemy := _aim_enemy(dir, 70.0, 0.93)
+	var enemy := _aim_enemy(dir, 85.0, 0.93)
 	if enemy:
 		_zip_enemy = enemy
 		_zip_to = enemy.global_position
 	else:
 		var hit := _ray(from, from + dir * 95.0)
-		if hit.is_empty():
+		if hit.is_empty() or (hit.position as Vector3).distance_to(center()) < 4.0:
 			Fx.word("?", center() + Vector3(0, 1.5, 0), "small", Color(1, 1, 1))
 			return
 		_zip_enemy = null
@@ -529,8 +529,9 @@ func _zip(delta: float) -> void:
 	model.aim_left_w = 0.8
 	model.play("jump", 0.1)
 	if _zip_enemy and is_instance_valid(_zip_enemy) and dist < 2.4:
+		var target := _zip_enemy
 		_end_zip()
-		_hit_enemy(_zip_enemy, 3, true)
+		_hit_enemy(target, 3, true)
 		velocity = -to.normalized() * 4.0 + Vector3.UP * 9.0
 		return
 	if dist < 1.6 or _zip_t > 1.6 or (get_slide_collision_count() > 0 and _zip_t > 0.1):

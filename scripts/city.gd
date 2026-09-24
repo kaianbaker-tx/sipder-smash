@@ -6,7 +6,7 @@ extends Node3D
 const U := 16.0            # one road tile = 16 m
 const NB := 6              # blocks per side
 const HALF := 12           # cells from the centre to the edge
-const BS := 16.0           # building scale
+const BS := 14.5           # building scale
 const GROUND_Y := 0.32     # top of the road tiles
 
 const CITY := "res://assets/city/"
@@ -38,6 +38,7 @@ func _ready() -> void:
 	_build_blocks()
 	_build_tower()
 	_build_skyline()
+	_build_signs()
 	_flush_multimeshes()
 	_build_lamp_glows()
 
@@ -52,8 +53,21 @@ func is_road(i: int) -> bool:
 	return posmod(i, 4) == 0
 
 
+# small props vanish far away; everything is batched per 3x3 city chunk so
+# the GPU can skip chunks that are off screen
+const SMALL := ["light-square", "traffic-light", "detail-tank", "chimney-small", "solar-panel-flat", "planter", "construction-cone", "construction-barrier", "construction-light", "tree-small", "tree-large", "shipping-container-a", "shipping-container-b", "shipping-container-c"]
+
+
+func _chunk(p: Vector3) -> String:
+	if p.length() > 260.0:
+		return "far"
+	var cx := clampi(int(floor((p.x + 210.0) / 140.0)), 0, 2)
+	var cz := clampi(int(floor((p.z + 210.0) / 140.0)), 0, 2)
+	return "%d_%d" % [cx, cz]
+
+
 func _add(path: String, xf: Transform3D, opts := {}) -> void:
-	var key := path + str(opts)
+	var key := path + str(opts) + _chunk(xf.origin)
 	if not _mm.has(key):
 		_mm[key] = []
 		_mm_opts[key] = opts
@@ -81,6 +95,8 @@ func _flush_multimeshes() -> void:
 		mmi.multimesh = mm
 		mmi.name = path.get_file().get_basename()
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if SMALL.has(mmi.name):
+			mmi.visibility_range_end = 230.0
 		add_child(mmi)
 	_mm.clear()
 
@@ -230,7 +246,7 @@ func _pick(list: Array) -> String:
 
 
 func _build_city_block(c: Vector3, d: float) -> void:
-	var q := U * 0.75   # quadrant centre offset (12 m)
+	var q := 11.0       # quadrant centre offset
 	var quads := [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]
 	var used := [false, false, false, false]
 	# sometimes a wide building takes two quadrants
@@ -281,7 +297,7 @@ func _place_building(name: String, pos: Vector3, face: Vector3, hscale: float) -
 		if (wb as AABB).end.y > top and a > base_area * 0.3:
 			top = (wb as AABB).end.y
 			main_box = wb
-	var info := {"pos": pos, "top": top, "box": main_box, "boxes": world_boxes, "name": name}
+	var info := {"pos": pos, "top": top, "box": main_box, "boxes": world_boxes, "name": name, "face": face}
 	buildings.append(info)
 	_decorate_roof(info)
 
@@ -344,7 +360,7 @@ func _roof_clear(info: Dictionary, p: Vector3) -> bool:
 func _build_block_edge(c: Vector3) -> void:
 	# street lamps around the block, arms over the road
 	var lamp := ROADS + "light-square.glb"
-	var half := U * 1.5 - 1.2
+	var half := U * 1.5 - 0.8
 	for side in 4:
 		var ang := side * PI * 0.5
 		var out := Vector3(sin(ang), 0, cos(ang))
@@ -471,6 +487,97 @@ func _build_skyline() -> void:
 		var h := rng.randf_range(0.7, 1.6)
 		var xf := Transform3D(Basis(Vector3.UP, rng.randf() * TAU) * Basis.from_scale(Vector3(s, s * h, s)), p)
 		_add(CITY + "low-detail-building-" + n + ".glb", xf)
+
+
+# --------------------------------------------------------------------------- signs
+
+var _sign_xf := {}   # texture path -> Array[Transform3D]
+
+
+func _sign(tex: String, xf: Transform3D) -> void:
+	if not _sign_xf.has(tex):
+		_sign_xf[tex] = []
+	(_sign_xf[tex] as Array).append(xf)
+
+
+func _build_signs() -> void:
+	var frame_img := Image.create(4, 4, false, Image.FORMAT_RGB8)
+	frame_img.fill(Color(0.2, 0.14, 0.3))
+	var frame_mat := Toon.material(ImageTexture.create_from_image(frame_img))
+	var frames: Array = []
+	var n_sign := 0
+	for b in buildings:
+		var info := b as Dictionary
+		if info.name == "tower" or not info.has("face"):
+			continue
+		var face: Vector3 = info.face
+		var base: AABB = info.boxes[0]
+		var side := Vector3(face.z, 0, -face.x)
+		var half_d := absf(face.x) * base.size.x * 0.5 + absf(face.z) * base.size.z * 0.5
+		var half_w := absf(side.x) * base.size.x * 0.5 + absf(side.z) * base.size.z * 0.5
+		var front := Vector3(base.get_center().x, 0, base.get_center().z) + face * (half_d + 0.25)
+		var yaw := atan2(face.x, face.z)
+		# shop sign above the ground floor
+		if rng.randf() < 0.55 and half_w > 5.0:
+			var w := minf(half_w * 1.2, 9.0)
+			var xf := Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(w, w * 0.375, 1)), front + Vector3(0, 7.2, 0) + side * rng.randf_range(-2.0, 2.0))
+			_sign("res://assets/ui/sign_%d.png" % (n_sign % 10), xf)
+			n_sign += 1
+		# graffiti on a side wall, down low
+		if rng.randf() < 0.35:
+			var gside := side if rng.randf() < 0.5 else -side
+			var gd := absf(gside.x) * base.size.x * 0.5 + absf(gside.z) * base.size.z * 0.5
+			var gp := Vector3(base.get_center().x, 0, base.get_center().z) + gside * (gd + 0.2) + face * rng.randf_range(-4.0, 4.0)
+			var gyaw := atan2(gside.x, gside.z)
+			var xf2 := Transform3D(Basis(Vector3.UP, gyaw) * Basis.from_scale(Vector3(7.0, 3.5, 1)), gp + Vector3(0, 2.6, 0))
+			_sign("res://assets/ui/graffiti_%d.png" % rng.randi_range(0, 4), xf2)
+		# rooftop billboard on low buildings
+		var top: float = info.top
+		if top < 45.0 and rng.randf() < 0.4:
+			var box: AABB = info.box
+			var bd := absf(face.x) * box.size.x * 0.5 + absf(face.z) * box.size.z * 0.5
+			var bp := Vector3(box.get_center().x, top, box.get_center().z) + face * (bd - 2.0)
+			var bw := 12.0
+			var bxf := Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(bw, bw * 0.375, 1)), bp + Vector3(0, 5.2, 0) + face * 0.35)
+			_sign("res://assets/ui/sign_%d.png" % (n_sign % 10), bxf)
+			n_sign += 1
+			frames.append(Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(bw + 0.8, bw * 0.375 + 0.8, 0.6)), bp + Vector3(0, 5.2, 0)))
+			for k: int in [-1, 1]:
+				frames.append(Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(0.5, 3.4, 0.5)), bp + side * (k * bw * 0.35) + Vector3(0, 1.7, 0)))
+	# the signs: one multimesh per picture
+	var sh: Shader = preload("res://shaders/sign.gdshader")
+	for tex in _sign_xf:
+		var mat := ShaderMaterial.new()
+		mat.shader = sh
+		mat.set_shader_parameter("tex", load(tex))
+		mat.set_shader_parameter("flicker", 0.0 if (tex as String).contains("graffiti") else 1.0)
+		var qm := QuadMesh.new()
+		qm.size = Vector2(1, 1)
+		qm.material = mat
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = qm
+		var xs: Array = _sign_xf[tex]
+		mm.instance_count = xs.size()
+		for i in xs.size():
+			mm.set_instance_transform(i, xs[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		add_child(mmi)
+	# billboard frames
+	if not frames.is_empty():
+		var bm := BoxMesh.new()
+		bm.size = Vector3.ONE
+		bm.material = frame_mat
+		var fm := MultiMesh.new()
+		fm.transform_format = MultiMesh.TRANSFORM_3D
+		fm.mesh = bm
+		fm.instance_count = frames.size()
+		for i in frames.size():
+			fm.set_instance_transform(i, frames[i])
+		var fmi := MultiMeshInstance3D.new()
+		fmi.multimesh = fm
+		add_child(fmi)
 
 
 # --------------------------------------------------------------------------- lamp glows

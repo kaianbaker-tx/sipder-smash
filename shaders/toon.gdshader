@@ -114,7 +114,7 @@ void fragment() {
 
 	vec3 lit_col = base * sun_color.rgb * 1.08;
 	vec3 mid_col = base * mix(shade_color.rgb, sun_color.rgb, 0.55);
-	vec3 shd_col = base * shade_color.rgb * (0.85 + 0.25 * sky);
+	vec3 shd_col = base * mix(shade_color.rgb * (0.85 + 0.25 * sky), vec3(0.95, 0.85, 1.0), 0.3 * character);
 
 	vec3 col = lit_col * lit + mid_col * mid + shd_col * shadow;
 
@@ -134,7 +134,7 @@ void fragment() {
 		refl = mix(refl, base, 0.25);
 		// lit rooms: pick per floor, per face, per coarse horizontal segment
 		vec3 tng = normalize(cross(N, vec3(0.0, 1.0, 0.0)) + vec3(0.0001));
-		float floor_id = floor(world_pos.y / 5.6);
+		float floor_id = floor(world_pos.y / 5.8);
 		float seg = floor(dot(world_pos, tng) / 9.0);
 		float r = hash1(vec2(floor_id * 3.1 + seg * 17.7, dot(N, vec3(1.0, 3.0, 7.0)) + inst_rand * 91.0));
 		float on = step(0.74, r);

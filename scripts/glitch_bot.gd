@@ -175,7 +175,7 @@ func take_hit(dmg: int, dir: Vector3, big_hit: bool) -> void:
 		return
 	var d := dmg * (2 if webbed_t > 0.0 else 1)
 	hp -= d
-	_flash = 1.0
+	_flash = 0.7
 	_awake = true
 	stun_t = 0.45
 	vel = dir * (14.0 if big_hit else 8.0) + Vector3.UP * 3.0

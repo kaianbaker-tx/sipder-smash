@@ -77,7 +77,7 @@ func _process(delta: float) -> void:
 	if _idle_look > 1.2 and hs > 8.0 and not Game.touch_mode:
 		var want := atan2(-vel.x, -vel.z)
 		yaw = lerp_angle(yaw, want, delta * 0.8)
-	var goal := target.global_position + Vector3(0, 1.5, 0)
+	var goal := target.global_position + Vector3(0, 2.1, 0)
 	var k := 1.0 - exp(-delta * (14.0 if spd < 20.0 else 9.0))
 	_follow = _follow.lerp(goal, k)
 	global_position = _follow
@@ -92,4 +92,4 @@ func _process(delta: float) -> void:
 	_shake = move_toward(_shake, 0.0, delta * 3.0)
 	var s := _shake * _shake
 	cam.h_offset = randf_range(-1, 1) * s * 0.5
-	cam.v_offset = randf_range(-1, 1) * s * 0.5 + 0.35
+	cam.v_offset = randf_range(-1, 1) * s * 0.5 + 0.45

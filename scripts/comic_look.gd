@@ -11,6 +11,11 @@ var _impact := 0.0
 var _glitch := 0.0
 var _hurt := 0.0
 var speed := 0.0
+# auto quality: render the 3D view smaller on slow computers
+var scale_3d := 1.0
+var _fps_t := 0.0
+var _fps_frames := 0
+var _slow := 0
 
 
 func _ready() -> void:
@@ -51,6 +56,26 @@ func attach(cam: Camera3D) -> void:
 	quad.position = Vector3(0, 0, -cam.near * 2.0)
 
 
+func _auto_quality(delta: float) -> void:
+	if Engine.time_scale < 0.9 or get_tree().paused or Game.args.has("autoplay"):
+		return
+	_fps_t += delta
+	_fps_frames += 1
+	if _fps_t < 2.0:
+		return
+	var fps := _fps_frames / _fps_t
+	_fps_t = 0.0
+	_fps_frames = 0
+	if fps < 42.0 and scale_3d > 0.55:
+		_slow += 1
+		if _slow >= 2:
+			_slow = 0
+			scale_3d = maxf(0.5, scale_3d - 0.15)
+			print("auto quality: 3D scale ", scale_3d, " (fps ", int(fps), ")")
+	else:
+		_slow = 0
+
+
 func impact(strength := 1.0) -> void:
 	_impact = maxf(_impact, strength)
 
@@ -70,8 +95,15 @@ func set_noir(on: bool) -> void:
 func _process(delta: float) -> void:
 	_time += delta
 	RenderingServer.global_shader_parameter_set("world_time", _time)
-	var vp := get_viewport().get_visible_rect().size
-	RenderingServer.global_shader_parameter_set("dot_size", maxf(3.0, vp.y / 150.0))
+	var vp := get_viewport()
+	var h := float(vp.size.y)
+	# never render 3D taller than 900 px (retina screens), then adapt to speed
+	var cap := minf(1.0, 900.0 / maxf(h, 1.0))
+	var want := minf(cap, scale_3d)
+	if absf(vp.scaling_3d_scale - want) > 0.01:
+		vp.scaling_3d_scale = want
+	RenderingServer.global_shader_parameter_set("dot_size", maxf(3.0, h * vp.scaling_3d_scale / 150.0))
+	_auto_quality(delta)
 	# impact frames are short and hard: hold for two frames then snap off
 	post.set_shader_parameter("impact", 1.0 if _impact > 0.5 else 0.0)
 	_impact = maxf(0.0, _impact - delta * 12.0)
