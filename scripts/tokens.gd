@@ -10,7 +10,20 @@ var player: Player
 var _t := 0.0
 
 
+var _city: Node
+
+
+## Put every token back (new game).
+func reset() -> void:
+	for t in tokens:
+		t.queue_free()
+	tokens.clear()
+	total = 0
+	setup(_city)
+
+
 func setup(city: Node) -> void:
+	_city = city
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 99
 	var spots: Array = city.roof_spots.duplicate()

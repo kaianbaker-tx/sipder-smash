@@ -36,6 +36,7 @@ var _roam_t := 0.0
 var _last_state := -1
 var _chapter_wait := 0.0
 var _boss_started := false
+var _was_captured := false
 
 const START := Vector3(8, 1, 40)
 
@@ -118,6 +119,12 @@ func _ready() -> void:
 		add_child(ap)
 		if Game.args.autoplay == "title":
 			_to_title()
+			match Game.args.get("panel", ""):
+				"suits":
+					title_ui._toggle_suits()
+					title_ui._cycle(1)
+				"help":
+					title_ui._help.visible = true
 		else:
 			_start_game()
 			if Game.args.has("chapter"):
@@ -175,6 +182,11 @@ func _to_title() -> void:
 	boss = null
 	hud.visible = false
 	hud.set_boss(null)
+	hud.set_objective("")
+	hud._captions.clear()
+	_chapter_wait = 0.0
+	_free_roam = false
+	chapter = 0
 	title_ui.visible = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_pick_title_spot()
@@ -204,6 +216,8 @@ func _start_game() -> void:
 	if _title_spot == Vector3.ZERO:
 		_pick_title_spot()
 	Game.reset_run()
+	tokens.reset()
+	Game.tokens_changed.emit(0)
 	Game.playing = true
 	title_ui.visible = false
 	hud.visible = true
@@ -284,6 +298,11 @@ func _process(delta: float) -> void:
 		_set_paused(not get_tree().paused)
 	if Input.is_action_just_pressed("cover") and not get_tree().paused:
 		_open_cover()
+	# the browser lets go of the mouse when Esc is pressed: open the pause menu
+	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	if _was_captured and not captured and not get_tree().paused and not Game.touch_mode:
+		_set_paused(true)
+	_was_captured = captured
 	# count swings / zips for the tutorial
 	if player.state != _last_state:
 		if player.state == Player.State.SWING:
@@ -310,12 +329,24 @@ func _process(delta: float) -> void:
 		hud.narrate(["Whoa, long way down! Back to the top!"], 2.0)
 
 
+var _hint_t := 0.0
+
+
 func _chapter1() -> void:
+	# repeat the tip if the player seems stuck
+	_hint_t += get_process_delta_time()
+	if _hint_t > 16.0 and step < 2 and not hud.captions_busy():
+		_hint_t = 0.0
+		if step == 0:
+			hud.narrate(["TIP: jump off the roof, then HOLD right mouse / SHIFT!"], 3.5)
+		else:
+			hud.narrate(["TIP: point the web at a building and press E!"], 3.5)
 	match step:
 		0:
 			hud.set_objective("SWING 3 TIMES  (%d/3)" % mini(_swings, 3))
 			if _swings >= 3:
 				step = 1
+				_hint_t = 0.0
 				Game.say("NICE SWINGING!", 1.6)
 				hud.narrate(["Now aim at a rooftop and press E to WEB-ZIP!"], 3.5)
 		1:
@@ -397,6 +428,8 @@ func _roam(delta: float) -> void:
 # ------------------------------------------------------------------ boss
 
 func _start_boss() -> void:
+	if mode != Mode.PLAY or chapter != 4 or _boss_started:
+		return
 	_boss_started = true
 	Fx.impact(1.0)
 	player.respawn(city.tower_top + Vector3(0, 1.5, 12))
@@ -445,6 +478,8 @@ func _boss_defeated() -> void:
 	Sfx.play("cheer")
 	Game.say("YOU DID IT!!!", 3.0)
 	get_tree().create_timer(3.5).timeout.connect(func() -> void:
+		if mode != Mode.PLAY:
+			return
 		mode = Mode.WIN
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		menus.show_win(_play_time))
@@ -468,6 +503,7 @@ func _set_paused(p: bool) -> void:
 	get_tree().paused = p
 	Engine.time_scale = 1.0
 	menus.show_pause(p)
+	_was_captured = false
 	if p:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	else:
@@ -486,6 +522,7 @@ func _close_cover() -> void:
 	hud.visible = true
 	touch.visible = Game.touch_mode
 	get_tree().paused = false
+	_was_captured = false
 	_capture()
 
 

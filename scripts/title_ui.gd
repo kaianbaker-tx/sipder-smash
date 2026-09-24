@@ -83,9 +83,8 @@ func _ready() -> void:
 
 func _build_suits(root: Control) -> void:
 	_suits = UiKit.panel(Color(1, 0.95, 0.8))
-	_suits.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	_suits.position = Vector2(-470, 90)
-	_suits.custom_minimum_size = Vector2(430, 0)
+	_suits.position = Vector2(400, 330)
+	_suits.custom_minimum_size = Vector2(400, 0)
 	_suits.visible = false
 	root.add_child(_suits)
 	var v := VBoxContainer.new()
