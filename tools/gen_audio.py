@@ -355,7 +355,7 @@ def beat_city():
         for k in [0, 1.5, 2.5] if bar % 2 == 0 else [0, 1.75, 2.5, 3.5]:
             place(drums, kick(), b0 + k * beat)
         for s in [1, 3]:
-            place(drums, snare(0.8) + np.pad(clap(0.8), (0, len(snare()) - len(clap()))), b0 + s * beat)
+            place(drums, snare(0.55) + np.pad(clap(0.5), (0, len(snare()) - len(clap()))), b0 + s * beat)
         for h in range(8):
             off = h * beat / 2 + (swing if h % 2 else 0)
             place(drums, hat(0.35 if h % 2 else 0.5, open_=(h == 7 and bar % 4 == 3)), b0 + off)

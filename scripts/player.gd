@@ -20,6 +20,7 @@ const MAX_SPEED := 52.0
 const CLIMB := 11.0
 const ZIP_SPEED := 58.0
 const MAX_HP := 6
+const SKY_CEIL := 125.0
 
 var rig: CamRig
 var model: HeroModel
@@ -330,14 +331,27 @@ func find_anchor() -> Dictionary:
 				best_score = score
 				best = {"pos": p + (hit.normal as Vector3) * 0.3, "sky": false}
 	if best.is_empty():
-		# no building close enough: webs still stick to the comic sky
+		# no building close enough: webs still stick to the comic sky,
+		# but only up to about rooftop height (no swinging to the moon!)
+		var ceil_y := SKY_CEIL
+		var city := get_tree().get_first_node_in_group("city")
+		if city and "tower_top" in city:
+			var tt: Vector3 = city.tower_top
+			if Vector2(tt.x - pos.x, tt.z - pos.z).length() < 70.0:
+				ceil_y = maxf(ceil_y, tt.y + 30.0)
 		var p := pos + fwd * 20.0 + Vector3.UP * 26.0
+		p.y = minf(p.y, ceil_y)
+		if p.y < pos.y + 6.0:
+			return {}
 		best = {"pos": p, "sky": true}
 	return best
 
 
 func _start_swing() -> void:
 	var a := find_anchor()
+	if a.is_empty():
+		_swing_t = -0.6
+		return
 	_anchor = a.pos
 	var d := center().distance_to(_anchor)
 	_rope = clampf(d * 0.92, 9.0, 60.0)

@@ -58,6 +58,9 @@ func _ready() -> void:
 	tokens.name = "Tokens"
 	add_child(tokens)
 	tokens.setup(city)
+	var birds: Node3D = load("res://scripts/birds.gd").new()
+	birds.name = "Birds"
+	add_child(birds)
 	portal = load("res://scripts/portal.gd").new()
 	portal.name = "Portal"
 	add_child(portal)
@@ -402,7 +405,7 @@ func _start_boss() -> void:
 	boss = GlitchKing.new()
 	add_child(boss)
 	boss.arena = city.tower_top
-	boss.global_position = portal.global_position - Vector3(0, 30, 0)
+	boss.global_position = city.tower_top + Vector3(0, 16, -6)
 	boss.defeated.connect(_boss_defeated)
 	boss.wants_minions.connect(func(n: int, at: Vector3) -> void:
 		for i in n:
@@ -414,7 +417,22 @@ func _start_boss() -> void:
 	hud.set_objective("DEFEAT THE GLITCH KING!")
 	Sfx.play("boss_roar")
 	Fx.word("ROOOAAR!", boss.global_position, "big", Color(1, 0.3, 0.6))
-	hud.narrate(["Smash him when he's DIZZY after a slam!", "Web-zip (E) at him to fly in!"], 3.0)
+	# face off: comic VERSUS panels
+	var to_boss := boss.global_position - player.global_position
+	to_boss.y = 0
+	var fwd := to_boss.normalized()
+	player.model.global_transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), player.global_position)
+	boss.rotation.y = atan2(-fwd.x, -fwd.z)
+	rig.yaw = atan2(-fwd.x, -fwd.z)
+	var vs: CanvasLayer = load("res://scripts/versus.gd").new()
+	add_child(vs)
+	get_tree().paused = true
+	hud.visible = false
+	vs.play(get_world_3d(), player.global_position, fwd, boss.global_position, look.post)
+	vs.finished.connect(func() -> void:
+		get_tree().paused = false
+		hud.visible = true
+		hud.narrate(["Smash him when he's DIZZY after a slam!", "Web-zip (E) at him to fly in!"], 3.0))
 
 
 func _boss_defeated() -> void:

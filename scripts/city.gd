@@ -457,6 +457,18 @@ func _build_tower() -> void:
 	img.fill(Color(1.0, 0.85, 0.2))
 	pad.material_override = Toon.material(ImageTexture.create_from_image(img))
 	add_child(pad)
+	# a giant spider emblem painted on the helipad
+	var emblem := MeshInstance3D.new()
+	var em := PlaneMesh.new()
+	em.size = Vector2(13, 13)
+	emblem.mesh = em
+	var emat := StandardMaterial3D.new()
+	emat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	emat.albedo_texture = preload("res://assets/ui/token.png")
+	emat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	emblem.material_override = emat
+	emblem.position = tower_top + Vector3(0, 0.64, 0)
+	add_child(emblem)
 	var pb := StaticBody3D.new()
 	var pcs := CollisionShape3D.new()
 	var psh := CylinderShape3D.new()

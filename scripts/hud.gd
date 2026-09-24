@@ -113,7 +113,7 @@ func _ready() -> void:
 	# narration caption (top centre)
 	_caption_panel = _caption_box(Color(1.0, 0.9, 0.25), 4)
 	_caption_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_caption_panel.position = Vector2(-300, 70)
+	_caption_panel.position = Vector2(-300, 104)
 	_caption_panel.custom_minimum_size = Vector2(600, 0)
 	_root.add_child(_caption_panel)
 	_caption = _label("", LUCKY, 26, Color(0.08, 0.02, 0.1), 0)

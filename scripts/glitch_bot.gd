@@ -64,6 +64,12 @@ func _ready() -> void:
 	add_child(cocoon)
 	home = global_position
 	_orbit = randf() * TAU
+	# arrive with a glitchy pop
+	body.scale = Vector3.ONE * 0.01
+	var tw := create_tween()
+	tw.tween_property(body, "scale", Vector3.ONE * s, 0.35).set_trans(Tween.TRANS_BACK)
+	Fx.burst.call_deferred(global_position, Color(0.2, 1, 1), 8, 6.0, 0.25)
+	Fx.burst.call_deferred(global_position, Color(1, 0.2, 0.7), 8, 6.0, 0.25)
 	_orbit_r = randf_range(7.0, 11.0)
 	fire_cd = randf_range(1.5, 3.5)
 	_t = randf() * 10.0

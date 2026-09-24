@@ -62,6 +62,9 @@ func _ready() -> void:
 			while k < secs:
 				shot_times.append(k)
 				k += every
+		"boss":
+			timeline = [[9.0, "quit", ""]]
+			shot_times = [3.0, 3.6, 4.4, 6.0, 8.0]
 		"cover":
 			timeline = [[2.0, "tap", "cover"], [4.0, "quit", ""]]
 			shot_times = [3.5]
@@ -80,6 +83,7 @@ func _ready() -> void:
 
 
 var _ai_t := 0.0
+var _practice := 0
 
 
 func _autopilot(delta: float) -> void:
@@ -120,7 +124,16 @@ func _autopilot(delta: float) -> void:
 		elif p.state == Player.State.AIR:
 			Input.action_press("swing")
 	else:
-		act = "jump"
+		# nothing to fight: practise swinging and zipping
+		Input.action_press("move_forward")
+		_practice += 1
+		if p.state == Player.State.GROUND:
+			act = "jump"
+		elif p.state == Player.State.AIR and _practice % 6 != 5:
+			Input.action_press("swing")
+		elif _practice % 6 == 5:
+			rig.pitch = 0.25
+			act = "zip"
 	if act != "":
 		Input.action_press(act)
 		get_tree().create_timer(0.06).timeout.connect(func() -> void: Input.action_release(act))
