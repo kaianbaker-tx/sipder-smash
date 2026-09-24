@@ -526,12 +526,15 @@ func _boss_defeated() -> void:
 		if mode != Mode.PLAY:
 			return
 		mode = Mode.WIN
+		player.enabled = false
+		player.velocity = Vector3.ZERO
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		menus.show_win(_play_time))
 
 
 func _keep_playing() -> void:
 	mode = Mode.PLAY
+	player.enabled = true
 	_free_roam = true
 	_roam_t = 3.0
 	chapter = 99

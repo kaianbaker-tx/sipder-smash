@@ -21,6 +21,7 @@ const CLIMB := 11.0
 const ZIP_SPEED := 58.0
 const MAX_HP := 6
 const SKY_CEIL := 125.0
+const ISLAND_EDGE := 215.0
 
 var rig: CamRig
 var model: HeroModel
@@ -358,6 +359,9 @@ func find_anchor() -> Dictionary:
 				ceil_y = maxf(ceil_y, tt.y + 30.0)
 		var p := pos + fwd * 20.0 + Vector3.UP * 26.0
 		p.y = minf(p.y, ceil_y)
+		# the sky only holds webs above the island, not out over the river
+		if maxf(absf(p.x), absf(p.z)) > ISLAND_EDGE:
+			return {}
 		if p.y < pos.y + 6.0:
 			return {}
 		best = {"pos": p, "sky": true}
