@@ -79,6 +79,9 @@ func _physics_process(delta: float) -> void:
 	if new_phase != phase:
 		phase = new_phase
 		Fx.word("PHASE %d!" % phase, global_position + Vector3(0, 6, 0), "big", Color(1, 0.3, 0.6))
+		var hud := get_tree().get_first_node_in_group("hud")
+		if hud:
+			hud.narrate(["GLITCH KING: BZZT! PUNY SPIDER! MINIONS, ATTACK!"] if phase == 2 else ["GLITCH KING: SYSTEM... ERR0R... GRRRR!!"], 2.5)
 		Sfx.play("boss_roar")
 		Fx.glitch(1.0)
 		Fx.shake(1.0)

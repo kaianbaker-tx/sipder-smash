@@ -106,6 +106,8 @@ func _next_suit() -> void:
 		if keys[i] != "gold" or Game.gold_unlocked:
 			break
 	Game.set_suit(keys[i])
+	Fx.glitch(1.0)
+	Sfx.play("glitch")
 	_refresh()
 
 

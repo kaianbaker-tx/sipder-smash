@@ -78,6 +78,11 @@ func _process(delta: float) -> void:
 		var want := atan2(-vel.x, -vel.z)
 		yaw = lerp_angle(yaw, want, delta * 0.8)
 	var goal := target.global_position + Vector3(0, 2.1, 0)
+	# don't let the pivot poke into a ledge above the hero
+	var q := PhysicsRayQueryParameters3D.create(target.global_position + Vector3(0, 1.0, 0), goal + Vector3(0, 0.4, 0), 1)
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if hit:
+		goal.y = minf(goal.y, (hit.position as Vector3).y - 0.45)
 	var k := 1.0 - exp(-delta * (14.0 if spd < 20.0 else 9.0))
 	_follow = _follow.lerp(goal, k)
 	global_position = _follow

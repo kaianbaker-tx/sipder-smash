@@ -8,11 +8,11 @@ signal suit_changed(suit: String)
 signal message(text: String, seconds: float)
 
 const SUITS := {
-	"classic": {"name": "CLASSIC", "tex": "res://assets/hero/suits/classic.png", "desc": "The one and only!"},
-	"midnight": {"name": "MIDNIGHT", "tex": "res://assets/hero/suits/midnight.png", "desc": "Black and red, stealthy!"},
-	"ghost": {"name": "GHOST", "tex": "res://assets/hero/suits/ghost.png", "desc": "Hood up. Super fast."},
-	"noir": {"name": "NOIR", "tex": "res://assets/hero/suits/noir.png", "desc": "Turns the world black & white!"},
-	"gold": {"name": "GOLDEN", "tex": "res://assets/hero/suits/gold.png", "desc": "Collect 25 spider tokens to unlock!"},
+	"classic": {"name": "CLASSIC", "tex": "res://assets/hero/suits/classic.png", "desc": "The one and only! Extra health."},
+	"midnight": {"name": "MIDNIGHT", "tex": "res://assets/hero/suits/midnight.png", "desc": "Stealthy: bots spot you later!"},
+	"ghost": {"name": "GHOST", "tex": "res://assets/hero/suits/ghost.png", "desc": "Hood up. Swings super fast!"},
+	"noir": {"name": "NOIR", "tex": "res://assets/hero/suits/noir.png", "desc": "Black & white world. Hits harder!"},
+	"gold": {"name": "GOLDEN", "tex": "res://assets/hero/suits/gold.png", "desc": "DOUBLE POINTS! Collect 25 tokens to unlock."},
 }
 const GOLD_TOKENS := 25
 
@@ -132,7 +132,7 @@ func reset_run() -> void:
 
 
 func add_score(points: int) -> void:
-	score += points * maxi(1, 1 + combo / 5)
+	score += points * maxi(1, 1 + combo / 5) * (2 if suit == "gold" else 1)
 	score_changed.emit(score)
 
 

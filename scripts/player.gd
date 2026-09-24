@@ -162,8 +162,8 @@ func _physics_process(delta: float) -> void:
 func _regen(delta: float) -> void:
 	if hp < MAX_HP:
 		_regen_t += delta
-		if _regen_t > 5.0:
-			_regen_t = 3.5
+		if _regen_t > (3.5 if Game.suit == "classic" else 5.0):
+			_regen_t = 2.5 if Game.suit == "classic" else 3.5
 			hp += 1
 			health_changed.emit(hp, MAX_HP)
 
@@ -367,7 +367,7 @@ func find_anchor() -> Dictionary:
 func _start_swing() -> void:
 	var a := find_anchor()
 	if a.is_empty():
-		_swing_t = -0.6
+		_swing_t = 0.3
 		return
 	_anchor = a.pos
 	var d := center().distance_to(_anchor)
@@ -390,7 +390,8 @@ func _swing(delta: float) -> void:
 	var rope := center() - _anchor
 	var rn := rope.normalized()
 	var tang := inp - rn * inp.dot(rn)
-	velocity += tang * SWING_PUMP * delta
+	var pump := SWING_PUMP * (1.3 if Game.suit == "ghost" else 1.0)
+	velocity += tang * pump * delta
 	# natural forward pump: speed up at the bottom of the arc
 	var below := clampf(-rn.y, 0.0, 1.0)
 	var hv := Vector3(velocity.x, 0, velocity.z)
@@ -399,7 +400,7 @@ func _swing(delta: float) -> void:
 	# reel the rope in a bit at the start for a snappy swing
 	if _swing_t < 0.5:
 		_rope = maxf(_rope - 8.0 * delta, 9.0)
-	velocity = velocity.limit_length(MAX_SPEED)
+	velocity = velocity.limit_length(MAX_SPEED * (1.15 if Game.suit == "ghost" else 1.0))
 	move_and_slide()
 	# rope constraint
 	var d := center() - _anchor
@@ -750,8 +751,14 @@ func _lunge(delta: float) -> void:
 		_set_state(State.AIR)
 
 
+const QUIPS := ["Too easy!", "Beep boop, you're OUT!", "Web-tastic!", "Is that all you got?", "Swing and a HIT!", "Bots, meet webs!", "Nailed it!", "Back to your dimension!"]
+var _quip_n := 0
+
+
 func _hit_enemy(e: Node3D, dmg: int, big: bool) -> void:
 	var dir := (e.global_position - center()).normalized()
+	if Game.suit == "noir":
+		dmg += 1
 	if e.has_method("take_hit"):
 		e.take_hit(dmg, dir, big)
 	var words := ["POW!", "BAM!", "WHAM!", "BOOF!", "KRAK!", "THWACK!", "SMASH!", "BONK!"]
@@ -767,6 +774,12 @@ func _hit_enemy(e: Node3D, dmg: int, big: bool) -> void:
 	Game.add_combo()
 	Game.add_score(25 if not big else 60)
 	_combo_t = 0.9
+	if "dead" in e and e.dead:
+		_quip_n += 1
+		if _quip_n % 4 == 1:
+			var hud := get_tree().get_first_node_in_group("hud")
+			if hud and not hud.captions_busy():
+				hud.narrate([QUIPS[randi() % QUIPS.size()]], 1.8)
 	if Game.combo > 0 and Game.combo % 10 == 0:
 		# every 10 hits: a dramatic slow-motion beat
 		Fx.slowmo(0.9)

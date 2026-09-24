@@ -41,6 +41,7 @@ var _race: Label
 
 func _ready() -> void:
 	layer = 10
+	add_to_group("hud")
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
