@@ -401,9 +401,47 @@ func _process(delta: float) -> void:
 	_overlay.queue_redraw()
 
 
+var radar_things: Callable   # returns [[Vector3, Color, size], ...]
+
+
+func _draw_radar() -> void:
+	# a round comic radar in the bottom-right corner, turning with the camera
+	var vp := _overlay.size
+	var r := 70.0
+	var c := Vector2(vp.x - r - 24, vp.y - r - 24)
+	if Game.touch_mode:
+		c = Vector2(vp.x - r - 24, r + 160)
+	_overlay.draw_circle(c + Vector2(5, 5), r + 4, Color(1, 0.2, 0.6, 0.8))
+	_overlay.draw_circle(c, r + 4, Color(0.05, 0, 0.08, 0.95))
+	_overlay.draw_circle(c, r, Color(0.2, 0.1, 0.35, 0.85))
+	for k in 3:
+		_overlay.draw_arc(c, r * (k + 1) / 3.0, 0, TAU, 32, Color(1, 1, 1, 0.12), 1.5)
+	var scale := r / 150.0
+	var yaw := rig.yaw
+	var me := player.global_position
+	var items: Array = radar_things.call() if radar_things.is_valid() else []
+	for it in items:
+		var p: Vector3 = it[0]
+		var d := Vector2(p.x - me.x, p.z - me.z)
+		# rotate so camera forward points up
+		var rot := d.rotated(yaw)
+		var sp := rot * scale
+		if sp.length() > r - 4:
+			if it.size() > 3 and it[3]:
+				sp = sp.normalized() * (r - 4)
+			else:
+				continue
+		_overlay.draw_circle(c + sp, it[2], it[1])
+	# the hero: a little arrow in the middle
+	var tri := PackedVector2Array([c + Vector2(0, -8), c + Vector2(6, 6), c + Vector2(-6, 6)])
+	_overlay.draw_colored_polygon(tri, Color(1, 1, 1))
+
+
 func _draw_overlay() -> void:
 	if not rig or not player:
 		return
+	if Game.playing:
+		_draw_radar()
 	var cam := rig.cam
 	var vp := _overlay.size
 	var font := BANGERS

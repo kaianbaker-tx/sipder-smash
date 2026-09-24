@@ -91,6 +91,7 @@ func _ready() -> void:
 	add_child(hud)
 	Game.tokens_changed.emit(Game.tokens)
 	hud.bind(player, rig)
+	hud.radar_things = _radar_things
 	race.status.connect(func(t: String) -> void: hud.set_race(t))
 	menus = load("res://scripts/menus.gd").new()
 	add_child(menus)
@@ -142,6 +143,12 @@ func _ready() -> void:
 				var d: Vector3 = race.rings[0].global_position - race.start_ring.global_position
 				rig.yaw = atan2(-d.x, -d.z)
 				rig.pitch = -0.1
+			if Game.args.autoplay == "street":
+				hud._captions.clear()
+				_chapter_wait = 0.0
+				player.respawn(Vector3(58, 0.5, 58))
+				rig.yaw = PI * 0.75
+				rig.pitch = -0.05
 			if Game.args.autoplay == "slam":
 				hud._captions.clear()
 				_chapter_wait = 0.0
@@ -548,6 +555,21 @@ func _set_paused(p: bool) -> void:
 		_capture()
 
 
+func _radar_things() -> Array:
+	var out: Array = []
+	out.append([city.tower_pos, Color(0.7, 0.4, 1.0), 6.0, true])
+	if race and not race.active:
+		out.append([race.start_ring.global_position, Color(1, 0.3, 0.6), 5.0, false])
+	var me := player.global_position
+	for i in tokens.spots.size():
+		if not tokens.taken[i] and tokens.spots[i].distance_to(me) < 150.0:
+			out.append([tokens.spots[i], Color(1, 0.85, 0.2), 2.5, false])
+	for e in get_tree().get_nodes_in_group("enemies"):
+		var big: bool = e is GlitchKing or ("big" in e and e.big)
+		out.append([(e as Node3D).global_position, Color(1, 0.2, 0.5), 5.0 if big else 3.5, true])
+	return out
+
+
 func _open_cover() -> void:
 	get_tree().paused = true
 	Engine.time_scale = 1.0
@@ -557,6 +579,7 @@ func _open_cover() -> void:
 
 
 func _close_cover() -> void:
+	cover.visible = false
 	hud.visible = true
 	touch.visible = Game.touch_mode
 	get_tree().paused = false

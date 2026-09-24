@@ -62,6 +62,16 @@ func _ready() -> void:
 			while k < secs:
 				shot_times.append(k)
 				k += every
+		"misc":
+			timeline = [
+				[1.0, "call", "_open_cover"], [2.0, "call", "_close_cover"],
+				[2.5, "tap", "pause"], [3.0, "menu", "_next_suit"], [3.2, "menu", "_next_suit"], [3.5, "menu", "_next_sens"], [3.8, "call", "_resume"],
+				[4.5, "ko", ""], [6.0, "water", ""], [9.0, "call", "_to_title"], [10.0, "call", "_start_game"], [12.0, "quit", ""],
+			]
+			shot_times = [1.5, 3.1, 4.7, 7.5, 9.5, 11.5]
+		"street":
+			timeline = [[8.0, "quit", ""]]
+			shot_times = [2.0, 4.0, 6.0, 7.5]
 		"race":
 			timeline = [[0.2, "press", "swing"], [1.4, "release", "swing"], [1.6, "press", "swing"], [2.8, "release", "swing"], [4.0, "quit", ""]]
 			shot_times = [0.6, 1.5, 3.0]
@@ -161,6 +171,15 @@ func _process(delta: float) -> void:
 				get_tree().create_timer(0.05).timeout.connect(func() -> void: Input.action_release(ev[2]))
 			"quit":
 				get_tree().quit()
+			"call":
+				main.call(ev[2])
+			"menu":
+				main.menus.call(ev[2])
+			"ko":
+				main.player.take_hit(10, main.player.global_position + Vector3(1, 0, 0))
+			"water":
+				main.player.global_position = Vector3(0, 5, 260)
+				main.player.velocity = Vector3.ZERO
 	if _next_shot < shot_times.size() and t >= shot_times[_next_shot]:
 		var img := get_viewport().get_texture().get_image()
 		img.save_png("%s/%s_%02d.png" % [shots_dir, script_name, _next_shot])

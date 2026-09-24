@@ -440,6 +440,7 @@ func _swing(delta: float) -> void:
 
 func _release_swing(jumped: bool) -> void:
 	web.release()
+	Sfx.play("whoosh", 0.15, -4.0)
 	model.aim_right_w = 0.0
 	var hv := Vector3(velocity.x, 0, velocity.z)
 	var fwd := hv.normalized() if hv.length() > 1.0 else (rig.forward() if rig else Vector3.FORWARD)
