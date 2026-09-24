@@ -152,6 +152,18 @@ func burst(pos: Vector3, color: Color, amount := 16, speed := 9.0, size := 0.35)
 	get_tree().create_timer(1.5, false).timeout.connect(p.queue_free)
 
 
+## A comic firework: a burst of glowing cubes plus a ring, with a POP word.
+func firework(pos: Vector3) -> void:
+	var cols := [Color(1, 0.25, 0.6), Color(0.2, 0.95, 1.0), Color(1, 0.9, 0.2), Color(0.6, 1, 0.3), Color(0.8, 0.4, 1)]
+	var c: Color = cols[randi() % cols.size()]
+	burst(pos, c, 40, 22.0, 0.9)
+	burst(pos, Color(1, 1, 1), 12, 14.0, 0.6)
+	ring(pos, Color(c.r, c.g, c.b, 0.9), 16.0, Vector3(randf_range(-1, 1), 1, randf_range(-1, 1)).normalized())
+	if randf() < 0.5:
+		word(["POP!", "BANG!", "WHEE!", "KA-POW!"][randi() % 4], pos, "small", c)
+	Sfx.play("explode", 0.3, -14.0)
+
+
 func ring(pos: Vector3, color: Color, radius := 4.0, up := Vector3.UP) -> void:
 	if not world:
 		return

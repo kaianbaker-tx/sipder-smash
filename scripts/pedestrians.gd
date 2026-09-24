@@ -47,6 +47,14 @@ func _ready() -> void:
 		people.append(p)
 
 
+## Everyone jumps for joy (the city is saved!).
+func cheer_all(seconds: float) -> void:
+	for p in people:
+		var per := p as Person
+		per.cheering = seconds
+		per.model.restart("jump")
+
+
 func _physics_process(delta: float) -> void:
 	if not player:
 		player = get_tree().get_first_node_in_group("player") as Player

@@ -494,16 +494,28 @@ func _start_boss() -> void:
 		hud.narrate(["Smash him when he's DIZZY after a slam!", "Web-zip (E) at him to fly in!"], 3.0))
 
 
+func _celebrate(seconds: float) -> void:
+	# fireworks over the city and the whole street cheers
+	var n := int(seconds * 2.5)
+	for i in n:
+		get_tree().create_timer(i * 0.4 + randf() * 0.3).timeout.connect(func() -> void:
+			var c := player.global_position
+			var p := c + Vector3(randf_range(-70, 70), randf_range(35, 80), randf_range(-70, 70))
+			Fx.firework(p))
+	people.cheer_all(seconds)
+
+
 func _boss_defeated() -> void:
 	hud.set_boss(null)
 	hud.set_objective("")
 	portal.close()
 	_clear_bots()
+	_celebrate(14.0)
 	Sfx.music("")
 	Sfx.play("win")
 	Sfx.play("cheer")
 	Game.say("YOU DID IT!!!", 3.0)
-	get_tree().create_timer(3.5).timeout.connect(func() -> void:
+	get_tree().create_timer(5.5).timeout.connect(func() -> void:
 		if mode != Mode.PLAY:
 			return
 		mode = Mode.WIN

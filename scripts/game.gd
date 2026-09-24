@@ -174,9 +174,11 @@ func say(text: String, seconds := 2.5) -> void:
 
 func _save() -> void:
 	var cfg := ConfigFile.new()
+	cfg.load("user://spider_smash.cfg")  # keep other sections (race record)
 	cfg.set_value("game", "suit", suit)
 	cfg.set_value("game", "gold", gold_unlocked)
 	cfg.set_value("game", "invert_y", invert_y)
+	cfg.set_value("game", "mouse_sens", mouse_sens)
 	cfg.save("user://spider_smash.cfg")
 
 
@@ -186,5 +188,6 @@ func _load() -> void:
 		suit = cfg.get_value("game", "suit", "classic")
 		gold_unlocked = cfg.get_value("game", "gold", false)
 		invert_y = cfg.get_value("game", "invert_y", false)
+		mouse_sens = cfg.get_value("game", "mouse_sens", 0.0025)
 	if suit == "gold" and not gold_unlocked:
 		suit = "classic"

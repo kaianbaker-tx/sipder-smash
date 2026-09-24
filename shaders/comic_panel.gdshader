@@ -7,6 +7,7 @@ uniform vec4 col_b : source_color = vec4(0.25, 0.05, 0.45, 1.0);
 uniform vec4 dot_col : source_color = vec4(1.0, 0.85, 0.2, 1.0);
 uniform float burst = 1.0;
 uniform float frame_px = 14.0;
+uniform float alpha = 0.94;
 
 float hash(float n) { return fract(sin(n) * 43758.5453); }
 
@@ -31,5 +32,5 @@ void fragment() {
 	vec2 e = min(p, res - p);
 	float fr = step(min(e.x, e.y), frame_px);
 	col = mix(col, vec3(0.03, 0.0, 0.06), fr);
-	COLOR = vec4(col, 0.94);
+	COLOR = vec4(col, max(alpha, fr));
 }
