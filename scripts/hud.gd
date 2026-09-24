@@ -36,6 +36,7 @@ var _hint: Label
 var _click: Label
 var _card: Control
 var _root: Control
+var _race: Label
 
 
 func _ready() -> void:
@@ -177,6 +178,13 @@ func _ready() -> void:
 	_root.add_child(_hint)
 	set_hint_visible(true)
 
+	_race = _label("", BANGERS, 40, Color(1, 0.9, 0.2), 12)
+	_race.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_race.position = Vector2(-200, 180)
+	_race.custom_minimum_size = Vector2(400, 0)
+	_race.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_root.add_child(_race)
+
 	_click = _label("CLICK TO PLAY!", BANGERS, 44, Color(1, 1, 1), 12)
 	_click.set_anchors_preset(Control.PRESET_CENTER)
 	_click.position = Vector2(-160, 60)
@@ -257,6 +265,10 @@ func _on_health(hp: int, max_hp: int) -> void:
 		_hearts[i].texture = HP_FULL if i < hp else HP_EMPTY
 	if hp < max_hp and hp >= 0 and hp < _hearts.size():
 		_pop(_hearts[hp])
+
+
+func set_race(text: String) -> void:
+	_race.text = text
 
 
 func set_objective(text: String) -> void:

@@ -19,6 +19,7 @@ var touch: CanvasLayer
 var title_cam: Camera3D
 var boss: GlitchKing
 var cover: CanvasLayer
+var race: Node3D
 
 var mode := Mode.TITLE
 var chapter := 0
@@ -62,6 +63,10 @@ func _ready() -> void:
 	var birds: Node3D = load("res://scripts/birds.gd").new()
 	birds.name = "Birds"
 	add_child(birds)
+	race = load("res://scripts/ring_rush.gd").new()
+	race.name = "RingRush"
+	add_child(race)
+	race.setup(city)
 	portal = load("res://scripts/portal.gd").new()
 	portal.name = "Portal"
 	add_child(portal)
@@ -86,6 +91,7 @@ func _ready() -> void:
 	add_child(hud)
 	Game.tokens_changed.emit(Game.tokens)
 	hud.bind(player, rig)
+	race.status.connect(func(t: String) -> void: hud.set_race(t))
 	menus = load("res://scripts/menus.gd").new()
 	add_child(menus)
 	menus.resume.connect(_resume)
@@ -268,8 +274,9 @@ func _next_chapter() -> void:
 		2:
 			hud.chapter_card("CHAPTER 2", "BOT BLITZ!")
 			hud.narrate(["Glitch-Bots are all over downtown!", "Follow the pink arrows. Smash 'em!"], 2.6)
-			_spawn_wave(10, false)
+			_spawn_wave(11, false, true, Vector3.INF, 3)
 			hud.set_hint_visible(false)
+			hud.narrate(["Watch out for the little green SPEEDY bots!"], 2.6)
 		3:
 			hud.chapter_card("CHAPTER 3", "BIG TROUBLE")
 			hud.narrate(["Uh oh. The MEGA-BOTS are here.", "Web them up first, then SMASH!"], 2.6)
@@ -379,7 +386,7 @@ func _wave_progress() -> void:
 
 # ------------------------------------------------------------------ bots
 
-func _spawn_wave(count: int, big: bool, objective := true, near := Vector3.INF) -> void:
+func _spawn_wave(count: int, big: bool, objective := true, near := Vector3.INF, speedy := 0) -> void:
 	var spots: Array = city.roof_spots.duplicate()
 	spots.shuffle()
 	var from := portal.global_position
@@ -399,6 +406,7 @@ func _spawn_wave(count: int, big: bool, objective := true, near := Vector3.INF) 
 			home = s + Vector3(0, 8.0 + randf() * 8.0, 0)
 		var b := GlitchBot.new()
 		b.big = big
+		b.speedy = i < speedy
 		add_child(b)
 		# they come flying out of the portal
 		b.global_position = from.lerp(home, 0.75 if near == Vector3.INF else 0.92) + Vector3(randf_range(-6, 6), 0, randf_range(-6, 6))

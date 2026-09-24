@@ -30,7 +30,7 @@ class Car:
 
 func _ready() -> void:
 	rng.seed = 21
-	for i in 26:
+	for i in 22:
 		_spawn(i)
 
 
@@ -58,6 +58,7 @@ func _spawn(i: int) -> void:
 	mi.mesh = Toon.merged_mesh("res://assets/cars/%s.glb" % kind)
 	mi.scale = Vector3.ONE * CAR_SCALE
 	mi.rotation.y = PI
+	mi.visibility_range_end = 240.0
 	c.node.add_child(mi)
 	var aabb := mi.mesh.get_aabb()
 	var cs := CollisionShape3D.new()

@@ -62,6 +62,22 @@ static func merged_mesh(path: String) -> ArrayMesh:
 	if _mesh_cache.has(path):
 		return _mesh_cache[path]
 	var inst: Node = (load(path) as PackedScene).instantiate()
+	# a single mesh with no offset: keep it as-is so Godot's automatic
+	# level-of-detail versions survive (far buildings get cheaper)
+	var mis := inst.find_children("*", "MeshInstance3D", true, false)
+	if inst is MeshInstance3D:
+		mis.append(inst)
+	if mis.size() == 1:
+		var only := mis[0] as MeshInstance3D
+		var xf0 := _xform_to(only, inst) if only != inst else Transform3D.IDENTITY
+		if xf0.is_equal_approx(Transform3D.IDENTITY) and only.mesh.get_surface_count() == 1:
+			var m0 := only.mesh.duplicate() as ArrayMesh
+			var t0 := _find_texture(only.get_active_material(0))
+			if t0:
+				m0.surface_set_material(0, material(t0))
+			inst.free()
+			_mesh_cache[path] = m0
+			return m0
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var tex: Texture2D = null

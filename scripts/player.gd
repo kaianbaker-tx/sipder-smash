@@ -6,7 +6,7 @@ extends CharacterBody3D
 signal health_changed(hp: int, max_hp: int)
 signal knocked_out
 
-enum State { GROUND, AIR, SWING, WALL, ZIP, LUNGE }
+enum State { GROUND, AIR, SWING, WALL, ZIP, LUNGE, SLAM }
 
 const RUN := 12.0
 const ACCEL := 80.0
@@ -58,6 +58,9 @@ var _fall_peak := 0.0
 var _web_cd := 0.0
 var _smash_cd := 0.0
 var _no_wall_t := 0.0
+var _fall_top := 0.0
+var _leap_said := false
+var _step_d := 0.0
 
 
 func _ready() -> void:
@@ -142,8 +145,10 @@ func _physics_process(delta: float) -> void:
 			_zip(delta)
 		State.LUNGE:
 			_lunge(delta)
+		State.SLAM:
+			_slam(delta)
 
-	if Input.is_action_just_pressed("smash") and _smash_cd <= 0.0 and state != State.LUNGE:
+	if Input.is_action_just_pressed("smash") and _smash_cd <= 0.0 and state != State.LUNGE and state != State.SLAM:
 		_smash()
 	if Input.is_action_just_pressed("web") and _web_cd <= 0.0:
 		_web_shot()
@@ -201,6 +206,10 @@ func _ground(delta: float) -> void:
 				_enter_wall(n)
 				return
 	var spd := hv.length()
+	_step_d += spd * delta
+	if _step_d > 2.4:
+		_step_d = 0.0
+		Sfx.play("step", 0.15, -10.0)
 	if _land_t > 0.0:
 		model.play("idle")
 	elif spd > 0.8:
@@ -235,6 +244,13 @@ func _air(delta: float) -> void:
 	velocity.z = hv.z
 	velocity.y = maxf(velocity.y - GRAV * delta, -MAX_FALL)
 	_fall_peak = minf(_fall_peak, velocity.y)
+	if velocity.y > 0.0:
+		_fall_top = global_position.y
+		_leap_said = false
+	elif not _leap_said and _fall_top - global_position.y > 45.0 and velocity.y < -20.0:
+		_leap_said = true
+		Fx.word("LEAP OF FAITH!", center() + Vector3(0, 2.5, 0), "big", Color(0.3, 0.95, 1.0))
+		Sfx.play("whoosh", 0.0)
 	move_and_slide()
 	if _flip_t > 0.0:
 		_flip_t -= delta
@@ -270,6 +286,7 @@ func _air(delta: float) -> void:
 
 func _land() -> void:
 	var hard := _fall_peak < -26.0
+	_fall_top = global_position.y
 	for i in get_slide_collision_count():
 		var col := get_slide_collision(i)
 		if col.get_collider() is AnimatableBody3D and col.get_normal().y > 0.6:
@@ -632,12 +649,70 @@ func _smash() -> void:
 		web.release()
 		model.aim_right_w = 0.0
 		_set_state(State.LUNGE)
+	elif state == State.AIR and _height_above_ground() > 7.0:
+		_start_slam()
 	else:
 		_punch_anim()
 		Sfx.play("whoosh", 0.15)
 		var hv := _facing * 4.0
 		velocity.x += hv.x
 		velocity.z += hv.z
+
+
+func _height_above_ground() -> float:
+	var hit := _ray(global_position, global_position + Vector3.DOWN * 200.0)
+	if hit.is_empty():
+		return 200.0
+	return global_position.y - (hit.position as Vector3).y
+
+
+func _start_slam() -> void:
+	_set_state(State.SLAM)
+	web.release()
+	model.aim_right_w = 0.0
+	velocity = Vector3(velocity.x * 0.3, -48.0, velocity.z * 0.3)
+	Fx.word("SPIDER SLAM!", center() + Vector3(0, 2, 0), "hit", Color(1, 0.35, 0.55))
+	Sfx.play("whoosh", 0.05)
+
+
+func _slam(_delta: float) -> void:
+	velocity.y = -52.0
+	move_and_slide()
+	model.punch = 1.0
+	model.punch_side = 1
+	model.aim_right = Vector3.DOWN
+	model.aim_right_w = 1.0
+	model.aim_left = Vector3.DOWN
+	model.aim_left_w = 1.0
+	if is_on_floor() or get_slide_collision_count() > 0:
+		model.aim_right_w = 0.0
+		model.aim_left_w = 0.0
+		model.punch = 0.0
+		var p := global_position
+		Fx.word("KRA-KOOM!!", p + Vector3(0, 1.5, 0), "big", Color(1, 0.9, 0.2))
+		Fx.ring(p + Vector3(0, 0.4, 0), Color(1, 1, 1, 0.95), 14.0)
+		Fx.ring(p + Vector3(0, 0.4, 0), Color(1, 0.3, 0.6, 0.9), 9.0)
+		Fx.burst(p, Color(0.9, 0.85, 1.0), 26, 12.0, 0.4)
+		Fx.shake(1.3)
+		Fx.impact(1.0)
+		Fx.hitstop(0.08)
+		Sfx.play("land_hard")
+		Sfx.play("punch_big", 0.05)
+		for e in get_tree().get_nodes_in_group("enemies"):
+			var en := e as Node3D
+			var d := en.global_position.distance_to(p)
+			if d < 14.0 and en.has_method("take_hit"):
+				en.take_hit(2, (en.global_position - p).normalized() + Vector3.UP, true)
+				Game.add_combo()
+				Game.add_score(40)
+		_fall_peak = 0.0
+		_land_t = 0.4
+		model.crouch = 1.0
+		var tw := create_tween()
+		tw.tween_interval(0.35)
+		tw.tween_property(model, "crouch", 0.0, 0.2)
+		velocity = Vector3.ZERO
+		_set_state(State.GROUND if is_on_floor() else State.AIR)
 
 
 func _punch_anim() -> void:
@@ -691,6 +766,10 @@ func _hit_enemy(e: Node3D, dmg: int, big: bool) -> void:
 	Game.add_combo()
 	Game.add_score(25 if not big else 60)
 	_combo_t = 0.9
+	if Game.combo > 0 and Game.combo % 10 == 0:
+		# every 10 hits: a dramatic slow-motion beat
+		Fx.slowmo(0.9)
+		Fx.word("x%d!!" % Game.combo, center() + Vector3(0, 3, 0), "big", Color(0.3, 0.95, 1.0))
 
 
 func _web_shot() -> void:
@@ -799,7 +878,7 @@ func _update_visual(delta: float) -> void:
 	var up := Vector3.UP
 	var fwd := _facing
 	match state:
-		State.GROUND, State.AIR, State.LUNGE:
+		State.GROUND, State.AIR, State.LUNGE, State.SLAM:
 			var inp := move_input()
 			if hv.length() > 1.0:
 				fwd = hv.normalized()

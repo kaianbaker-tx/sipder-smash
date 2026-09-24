@@ -191,6 +191,16 @@ func hitstop(seconds: float) -> void:
 	_stop_until = Time.get_ticks_msec() + int(seconds * 1000.0)
 
 
+var _slow_until := 0
+
+
+## A short dramatic slow-motion moment (real seconds).
+func slowmo(seconds: float) -> void:
+	Engine.time_scale = 0.35
+	_slow_until = Time.get_ticks_msec() + int(seconds * 1000.0)
+	impact(1.0)
+
+
 func impact(strength := 1.0) -> void:
 	if look:
 		look.impact(strength)
@@ -210,6 +220,10 @@ func _process(_delta: float) -> void:
 	if _stop_until > 0 and Time.get_ticks_msec() >= _stop_until:
 		_stop_until = 0
 		if not get_tree().paused:
+			Engine.time_scale = 0.35 if _slow_until > Time.get_ticks_msec() else 1.0
+	if _slow_until > 0 and Time.get_ticks_msec() >= _slow_until:
+		_slow_until = 0
+		if not get_tree().paused and _stop_until == 0:
 			Engine.time_scale = 1.0
 	if not rig or not rig.cam:
 		return

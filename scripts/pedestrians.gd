@@ -27,7 +27,7 @@ func _ready() -> void:
 	var skins := []
 	for s in SKINS:
 		skins.append(load("res://assets/hero/skins/%s.png" % s))
-	for i in 18:
+	for i in 15:
 		var p := Person.new()
 		p.model = HeroModel.new()
 		p.model.skin = skins[i % skins.size()]

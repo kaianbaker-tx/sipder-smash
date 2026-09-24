@@ -8,6 +8,7 @@ signal died(bot: GlitchBot)
 const MODEL := preload("res://assets/enemy/enemy-flying.glb")
 
 @export var big := false
+@export var speedy := false
 var hp := 3
 var max_hp := 3
 var dead := false
@@ -31,11 +32,11 @@ var _awake := false
 
 func _ready() -> void:
 	add_to_group("enemies")
-	max_hp = 8 if big else 3
+	max_hp = 8 if big else (1 if speedy else 3)
 	hp = max_hp
 	body = MODEL.instantiate()
 	add_child(body)
-	var s := 4.2 if big else 2.2
+	var s := 4.2 if big else (1.5 if speedy else 2.2)
 	body.scale = Vector3.ONE * s
 	body.position = Vector3(0, -0.45 * s, 0)
 	var tex: Texture2D = null
@@ -44,7 +45,7 @@ func _ready() -> void:
 		if m is BaseMaterial3D:
 			tex = (m as BaseMaterial3D).albedo_texture
 			break
-	mat = Toon.unique_material(tex, {"character": 1.0, "palette_shift": 0.55 if big else 0.0})
+	mat = Toon.unique_material(tex, {"character": 1.0, "palette_shift": 0.55 if big else (0.3 if speedy else 0.0)})
 	for mi in body.find_children("*", "MeshInstance3D", true, false):
 		(mi as MeshInstance3D).material_override = mat
 		(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -116,7 +117,7 @@ func _physics_process(delta: float) -> void:
 
 	var goal: Vector3
 	if _awake:
-		_orbit += delta * (0.35 if not big else 0.2)
+		_orbit += delta * (0.35 if not big else 0.2) * (2.2 if speedy else 1.0)
 		var off := Vector3(cos(_orbit), 0, sin(_orbit)) * _orbit_r
 		goal = player.center() + off + Vector3(0, 3.5 + sin(_t * 0.7) * 2.0, 0)
 		if dist > aggro_range * 1.6:
@@ -124,7 +125,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		goal = home + Vector3(cos(_t * 0.5) * 4.0, sin(_t * 1.3) * 1.5, sin(_t * 0.5) * 4.0)
 	var want := (goal - global_position)
-	var spd := 16.0 if big else 20.0
+	var spd := 16.0 if big else (32.0 if speedy else 20.0)
 	var desired := want.limit_length(spd)
 	# climb over buildings in the way
 	if want.length() > 3.0:
@@ -144,6 +145,8 @@ func _physics_process(delta: float) -> void:
 		fire_cd -= delta
 		if fire_cd <= 0.0:
 			fire_cd = randf_range(2.2, 3.6) if not big else randf_range(1.6, 2.4)
+			if speedy:
+				fire_cd *= 1.8
 			_fire()
 
 

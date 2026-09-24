@@ -30,6 +30,7 @@ const SOUNDS := {
 	"boss_roar": "res://assets/sounds/boss_roar.wav",
 	"cheer": "res://assets/sounds/cheer.wav",
 	"honk": "res://assets/sounds/honk.wav",
+	"step": "res://assets/sounds/step.wav",
 }
 const MUSIC := {
 	"city": "res://assets/music/city_beat.wav",

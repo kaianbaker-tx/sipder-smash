@@ -245,6 +245,11 @@ def sfx():
     x = x[:len(x) - f]
     save("wind", x, peak=0.5)
 
+    # STEP: soft sneaker footstep
+    d = 0.09
+    x = lp(noise(d), 1400) * env(int(SR * d), 0.001, 0.025, 4) + chirp(180, 90, d) * env(int(SR * d), 0.001, 0.03, 4) * 0.6
+    save("step", x, peak=0.5)
+
     # HONK: a two-tone taxi horn
     d = 0.45
     t = t_(d)

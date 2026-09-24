@@ -39,8 +39,10 @@ func _ready() -> void:
 	_build_tower()
 	_build_skyline()
 	_build_signs()
+	_build_parked_cars()
 	_flush_multimeshes()
 	_build_lamp_glows()
+	_build_beacons()
 	_build_steam()
 
 
@@ -56,7 +58,7 @@ func is_road(i: int) -> bool:
 
 # small props vanish far away; everything is batched per 3x3 city chunk so
 # the GPU can skip chunks that are off screen
-const SMALL := ["light-square", "traffic-light", "detail-tank", "chimney-small", "solar-panel-flat", "planter", "construction-cone", "construction-barrier", "construction-light", "tree-small", "tree-large", "shipping-container-a", "shipping-container-b", "shipping-container-c"]
+const SMALL := ["sedan", "taxi", "suv", "van", "police", "light-square", "traffic-light", "detail-tank", "chimney-small", "solar-panel-flat", "planter", "construction-cone", "construction-barrier", "construction-light", "tree-small", "tree-large", "shipping-container-a", "shipping-container-b", "shipping-container-c"]
 
 
 func _chunk(p: Vector3) -> String:
@@ -67,13 +69,15 @@ func _chunk(p: Vector3) -> String:
 	return "%d_%d" % [cx, cz]
 
 
-func _add(path: String, xf: Transform3D, opts := {}) -> void:
-	var key := path + str(opts) + _chunk(xf.origin)
+## Queue an instance. `custom` rides along as per-instance data (the toon
+## shader reads it as wall tint + hue shift when use_custom is on).
+func _add(path: String, xf: Transform3D, opts := {}, custom := Color(1, 1, 1, 0), chunked := true) -> void:
+	var key := path + str(opts) + (_chunk(xf.origin) if chunked else "all")
 	if not _mm.has(key):
 		_mm[key] = []
 		_mm_opts[key] = opts
 		_mm_path[key] = path
-	(_mm[key] as Array).append(xf)
+	(_mm[key] as Array).append([xf, custom])
 
 
 func _flush_multimeshes() -> void:
@@ -88,10 +92,14 @@ func _flush_multimeshes() -> void:
 			mesh.surface_set_material(0, Toon.material(tex, opts))
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_custom_data = opts.get("use_custom", 0.0) > 0.0
 		mm.mesh = mesh
 		mm.instance_count = xfs.size()
 		for k in xfs.size():
-			mm.set_instance_transform(k, xfs[k])
+			var e: Array = xfs[k]
+			mm.set_instance_transform(k, e[0])
+			if mm.use_custom_data:
+				mm.set_instance_custom_data(k, e[1])
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = mm
 		mmi.name = path.get_file().get_basename()
@@ -315,7 +323,8 @@ const LOOKS := [
 
 func _add_building_mesh(path: String, xf: Transform3D, look: int) -> void:
 	var l: Array = LOOKS[look]
-	_add(path, xf, {"windows": 1.0, "wall_tint": l[0], "palette_shift": l[1]})
+	var c: Color = l[0]
+	_add(path, xf, {"windows": 1.0, "use_custom": 1.0}, Color(c.r, c.g, c.b, l[1]))
 
 
 func _decorate_roof(info: Dictionary) -> void:
@@ -593,6 +602,30 @@ func _build_signs() -> void:
 		add_child(fmi)
 
 
+# --------------------------------------------------------------------------- parked cars
+
+func _build_parked_cars() -> void:
+	# a row of parked cars here and there, tucked against the curb
+	var kinds := ["sedan", "taxi", "suv", "van", "police"]
+	for k in 28:
+		var along_x := rng.randf() < 0.5
+		var road := rng.randi_range(-3, 3) * 64.0
+		var t := rng.randf_range(-180.0, 180.0)
+		# skip intersections
+		if absf(fposmod(t + 32.0, 64.0) - 32.0) < 14.0:
+			continue
+		var side := -1.0 if rng.randf() < 0.5 else 1.0
+		var lane := side * 6.4
+		var p := Vector3(t, GROUND_Y, road + lane) if along_x else Vector3(road + lane, GROUND_Y, t)
+		var yaw := (PI * 0.5 if along_x else 0.0) + (PI if rng.randf() < 0.5 else 0.0)
+		var kind: String = kinds[rng.randi() % kinds.size()]
+		var path := "res://assets/cars/%s.glb" % kind
+		var xf := Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3.ONE * 1.45), p)
+		_add(path, xf)
+		var aabb := Toon.merged_mesh(path).get_aabb()
+		_static_boxes([aabb.grow(-0.05)], xf)
+
+
 # --------------------------------------------------------------------------- steam
 
 func _build_steam() -> void:
@@ -616,23 +649,15 @@ func _build_steam() -> void:
 	var grad := Gradient.new()
 	grad.set_color(0, Color(1.0, 0.95, 1.0))
 	grad.set_color(1, Color(0.8, 0.7, 0.95))
-	for k in 16:
+	var covers: Array = []
+	for k in 12:
 		var ri := rng.randi_range(-3, 3) * 4
 		var along := rng.randi_range(-11, 11)
 		if is_road(along):
 			along += 1
 		var p := cell_pos(ri, along) if k % 2 == 0 else cell_pos(along, ri)
 		p += Vector3(rng.randf_range(-2.5, 2.5), GROUND_Y, rng.randf_range(-2.5, 2.5)) * Vector3(1, 1, 1)
-		var cover := MeshInstance3D.new()
-		var cyl := CylinderMesh.new()
-		cyl.top_radius = 0.9
-		cyl.bottom_radius = 0.9
-		cyl.height = 0.08
-		cyl.radial_segments = 16
-		cover.mesh = cyl
-		cover.material_override = cover_mat
-		cover.position = p + Vector3(0, 0.02, 0)
-		add_child(cover)
+		covers.append(Transform3D(Basis(), p + Vector3(0, 0.02, 0)))
 		var ps := CPUParticles3D.new()
 		ps.mesh = puff
 		ps.amount = 10
@@ -650,6 +675,71 @@ func _build_steam() -> void:
 		ps.visibility_range_end = 160.0
 		ps.position = p
 		add_child(ps)
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.9
+	cyl.bottom_radius = 0.9
+	cyl.height = 0.08
+	cyl.radial_segments = 16
+	cyl.material = cover_mat
+	_mm_node(cyl, covers, "Manholes")
+
+
+# --------------------------------------------------------------------------- beacons
+
+func _build_beacons() -> void:
+	# antennas with blinking red lights on the tallest towers
+	var masts: Array = []
+	var lights: Array = []
+	for b in buildings:
+		var info := b as Dictionary
+		if info.top < 58.0:
+			continue
+		var box: AABB = info.box
+		var c := Vector3(box.get_center().x, info.top, box.get_center().z)
+		var h := 9.0 if info.name != "tower" else 18.0
+		if info.name == "tower":
+			c += Vector3(10, 0, 10)
+		masts.append(Transform3D(Basis.from_scale(Vector3(0.45, h, 0.45)), c + Vector3(0, h * 0.5, 0)))
+		lights.append(Transform3D(Basis(), c + Vector3(0, h + 0.4, 0)))
+	var img := Image.create(4, 4, false, Image.FORMAT_RGB8)
+	img.fill(Color(0.3, 0.25, 0.4))
+	var bm := BoxMesh.new()
+	bm.material = Toon.material(ImageTexture.create_from_image(img))
+	_mm_node(bm, masts, "Masts")
+	var sh := Shader.new()
+	sh.code = """
+shader_type spatial;
+render_mode unshaded, fog_disabled;
+global uniform float world_time;
+varying float seed;
+void vertex() { seed = fract(sin(dot(MODEL_MATRIX[3].xz, vec2(12.9898, 78.233))) * 43758.5453); }
+void fragment() {
+	float on = step(0.5, fract(world_time * 0.8 + seed));
+	ALBEDO = mix(vec3(0.35, 0.05, 0.08), vec3(1.0, 0.15, 0.2), on);
+}
+"""
+	var lm := ShaderMaterial.new()
+	lm.shader = sh
+	var sm := SphereMesh.new()
+	sm.radius = 0.7
+	sm.height = 1.4
+	sm.radial_segments = 8
+	sm.rings = 4
+	sm.material = lm
+	_mm_node(sm, lights, "Beacons")
+
+
+func _mm_node(mesh: Mesh, xfs: Array, name: String) -> void:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = mesh
+	mm.instance_count = xfs.size()
+	for i in xfs.size():
+		mm.set_instance_transform(i, xfs[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.name = name
+	add_child(mmi)
 
 
 # --------------------------------------------------------------------------- lamp glows

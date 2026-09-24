@@ -34,10 +34,13 @@ uniform float glitch = 0.0;
 uniform float flash = 0.0;
 uniform vec4 flash_color : source_color = vec4(1.0);
 uniform float palette_shift = 0.0;
+// 1 = take wall tint (rgb) and hue shift (a) from the MultiMesh instance data
+uniform float use_custom = 0.0;
 
 varying vec3 world_pos;
 varying vec3 world_nrm;
 varying float inst_rand;
+varying vec4 inst_custom;
 
 float hash1(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -57,6 +60,7 @@ void vertex() {
 	world_nrm = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	vec3 o = MODEL_MATRIX[3].xyz;
 	inst_rand = hash1(o.xz * 0.013 + o.y * 0.07);
+	inst_custom = INSTANCE_CUSTOM;
 	if (glitch > 0.0) {
 		float band = floor(VERTEX.y * 6.0 + world_time * 23.0);
 		float j = step(0.82, hash1(vec2(band, floor(world_time * 15.0))));
@@ -109,9 +113,11 @@ void fragment() {
 	}
 
 	vec3 base = tex * tint.rgb;
-	base = mix(base * wall_tint.rgb, base, smoothstep(0.12, 0.3, sat0));
-	if (palette_shift != 0.0) {
-		base = mix(base, hue_shift(base, palette_shift), smoothstep(0.12, 0.3, sat0) * (1.0 - is_window));
+	vec3 wt = use_custom > 0.5 ? inst_custom.rgb : wall_tint.rgb;
+	float ps = use_custom > 0.5 ? inst_custom.a : palette_shift;
+	base = mix(base * wt, base, smoothstep(0.12, 0.3, sat0));
+	if (ps != 0.0) {
+		base = mix(base, hue_shift(base, ps), smoothstep(0.12, 0.3, sat0) * (1.0 - is_window));
 	}
 
 	// --- light bands --------------------------------------------------------
