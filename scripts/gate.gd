@@ -83,8 +83,10 @@ func _process(delta: float) -> void:
 	var player := get_tree().get_first_node_in_group("player") as Node3D
 	if not player:
 		return
-	var p := player.global_position + Vector3(0, 1.0, 0)
+	# anywhere inside the ring counts, even jumping in from a bit below
+	var p := player.global_position
 	var c := centre()
-	if Vector2(p.x - c.x, p.z - c.z).length() < size * 0.8 and absf(p.y - c.y) < size:
+	var dy := p.y - global_position.y
+	if Vector2(p.x - c.x, p.z - c.z).length() < size * 0.8 and dy > -4.0 and dy < size * 2.0:
 		armed = false
 		entered.emit()
