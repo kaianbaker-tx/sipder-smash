@@ -24,6 +24,7 @@ var start_look := Vector3.FORWARD     # which way the camera faces on arrival
 var arena := Vector3.ZERO             # local; the boss fights here (Glitch-Verse)
 var bot_spots: Array[Vector3] = []    # local points in the air for bots
 var safe_spots: Array[Vector3] = []   # local points on solid ground
+var gate_spots: Array[Vector3] = []   # local open ground a portal fits on
 var built := false
 
 var rng := RandomNumberGenerator.new()
@@ -43,6 +44,8 @@ func ensure_built() -> void:
 	add_child(_bodies)
 	build()
 	_flush()
+	if gate_spots.is_empty():
+		gate_spots = safe_spots.duplicate()
 
 
 ## Subclasses make the place here.

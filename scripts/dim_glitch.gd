@@ -68,6 +68,8 @@ func build() -> void:
 	# the arena where the Glitch King waits
 	add_disc(34.0, 10.0, arena, Color.WHITE, grid)
 	safe_spots.append(arena + Vector3(0, 0.2, 18))
+	for k in 6:
+		gate_spots.append(arena + Vector3(cos(k * TAU / 6.0) * 20.0, 0.2, sin(k * TAU / 6.0) * 20.0))
 	# glowing pylons around the arena rim
 	for k in 8:
 		var a := k * TAU / 8.0
@@ -79,7 +81,8 @@ func build() -> void:
 		var top := rng.randf_range(10.0, 42.0)
 		var c := Vector3(cos(a) * r, top, sin(a) * r)
 		add_block(Vector3(24, 6, 24), c - Vector3(0, 3, 0), Color.WHITE, true, grid)
-		safe_spots.append(c + Vector3(0, 0.2, 0))
+		safe_spots.append(c + Vector3(6, 0.2, 6))
+		gate_spots.append(c + Vector3(6, 0.2, 6))
 		var tower: String = TOWERS[rng.randi() % TOWERS.size()]
 		var hs := rng.randf_range(0.8, 1.2)
 		var shift: float = [0.5, 0.82, 0.9, 0.3][k % 4]

@@ -589,6 +589,7 @@ func _open_gate(to: int) -> void:
 	gate.global_position = place
 	_gate_to = to
 	gate.entered.connect(_on_gate)
+	hud.goal = gate
 	if not _free_roam:
 		hud.set_objective("JUMP INTO THE PORTAL!")
 		Game.say("A PORTAL OPENED!", 2.0)
@@ -597,47 +598,70 @@ func _open_gate(to: int) -> void:
 	Fx.glitch(0.5)
 
 
-## Somewhere solid and easy to reach for a new portal.
+## Somewhere solid and easy to reach for a new portal: flat ground a few
+## steps from the hero if there is some, else the nearest open street/island.
 func _gate_spot() -> Vector3:
 	var me := player.global_position
-	if dim:
-		# the nearest safe ground (street, roof, island) that isn't right under us
-		var best := dim.safe_spot(me) - Vector3(0, 1.5, 0)
-		var bd := INF
-		for sp in dim.safe_spots:
-			var g := dim.to_global(sp)
-			var d := g.distance_to(me)
-			if d >= 10.0 and d < bd:
-				bd = d
-				best = g
-		return best
-	# in the city: open ground a few steps ahead (or to a side), else a street
-	var chest := me + Vector3(0, 1.5, 0)
 	var space := get_world_3d().direct_space_state
-	for dir: Vector3 in [rig.forward(), -rig.forward(), rig.right(), -rig.right()]:
-		var q := PhysicsRayQueryParameters3D.create(chest, chest + dir * 18.0, 1)
+	# the ground under the hero (they may still be swinging)
+	var q0 := PhysicsRayQueryParameters3D.create(me + Vector3(0, 1, 0), me + Vector3(0, -80, 0), 1)
+	q0.exclude = [player.get_rid()]
+	var under := space.intersect_ray(q0)
+	if under:
+		var feet: Vector3 = under.position
+		for dir: Vector3 in [rig.forward(), rig.right(), -rig.right(), -rig.forward()]:
+			dir.y = 0.0
+			dir = dir.normalized()
+			if _walkable(space, feet, dir, 14.0):
+				return _ground_at(space, feet + dir * 14.0, feet.y)
+	# no room here: the nearest open spot the place offers
+	var spots: Array = []
+	if dim:
+		for sp in dim.gate_spots:
+			spots.append(dim.to_global(sp))
+	else:
+		for n in city.street_nodes:
+			spots.append((n as Vector3) + Vector3(6, 0.3, 6))
+	var best: Vector3 = spots[0]
+	var bd := INF
+	for g: Vector3 in spots:
+		var d := g.distance_to(me)
+		if d >= 10.0 and d < bd:
+			bd = d
+			best = g
+	return best
+
+
+## Is there flat, open ground from `feet` along `dir` for `dist` metres?
+func _walkable(space: PhysicsDirectSpaceState3D, feet: Vector3, dir: Vector3, dist: float) -> bool:
+	for h in [1.5, 7.0, 13.0]:
+		var a := feet + Vector3(0, h, 0)
+		var q := PhysicsRayQueryParameters3D.create(a, a + dir * (dist + 6.0), 1)
 		q.exclude = [player.get_rid()]
 		if not space.intersect_ray(q).is_empty():
-			continue
-		var p := me + dir * 14.0
-		var down := PhysicsRayQueryParameters3D.create(p + Vector3(0, 4, 0), p + Vector3(0, -12, 0), 1)
-		var hit := space.intersect_ray(down)
-		if hit:
-			return hit.position
-	var best_s: Vector3 = city.street_nodes[0]
-	var bs := INF
-	for n in city.street_nodes:
-		var d := (n as Vector3).distance_to(me)
-		if d < bs:
-			bs = d
-			best_s = n
-	return best_s + Vector3(6, 0.3, 6)
+			return false
+	var s := 2.0
+	while s <= dist + 4.0:
+		var y := _ground_at(space, feet + dir * s, feet.y).y
+		if absf(y - feet.y) > 1.2:
+			return false
+		s += 2.0
+	return true
+
+
+## The ground under a point, looking a little above and below `y`.
+func _ground_at(space: PhysicsDirectSpaceState3D, p: Vector3, y: float) -> Vector3:
+	var q := PhysicsRayQueryParameters3D.create(Vector3(p.x, y + 3.0, p.z), Vector3(p.x, y - 6.0, p.z), 1)
+	q.exclude = [player.get_rid()]
+	var hit := space.intersect_ray(q)
+	return hit.position if hit else Vector3(p.x, y - 100.0, p.z)
 
 
 func _close_gate() -> void:
 	if gate and is_instance_valid(gate):
 		gate.queue_free()
 	gate = null
+	hud.goal = null
 
 
 func _on_gate() -> void:

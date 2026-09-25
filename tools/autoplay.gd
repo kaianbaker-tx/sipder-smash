@@ -103,6 +103,7 @@ func _ready() -> void:
 
 var _ai_t := 0.0
 var _practice := 0
+var _gate_t := 0.0
 
 
 func _autopilot(delta: float) -> void:
@@ -118,14 +119,22 @@ func _autopilot(delta: float) -> void:
 			bd = d
 			best = e
 	# a portal is open and nothing to fight: walk into it
+	if not main.gate:
+		_gate_t = 0.0
 	if not best and main.gate and is_instance_valid(main.gate) and not main.get_tree().paused:
 		var gc: Vector3 = main.gate.centre()
 		var flat := Vector3(gc.x - p.global_position.x, 0, gc.z - p.global_position.z)
+		_gate_t += delta
 		if flat.length() > 25.0 or absf(gc.y - p.global_position.y) > 12.0:
 			# test shortcut: hop next to the portal
 			p.global_position = main.gate.global_position - flat.normalized() * 10.0 + Vector3(0, 1.0, 0)
 			p.velocity = Vector3.ZERO
 			flat = Vector3(gc.x - p.global_position.x, 0, gc.z - p.global_position.z)
+		if _gate_t > 8.0:
+			print("autopilot: could not walk into the portal at ", main.gate.global_position.snapped(Vector3.ONE * 0.1), " from ", p.global_position.snapped(Vector3.ONE * 0.1))
+			p.global_position = main.gate.global_position + Vector3(0, 1.0, 0)
+			p.velocity = Vector3.ZERO
+			_gate_t = 0.0
 		rig.yaw = atan2(-flat.x, -flat.z)
 		Input.action_press("move_forward")
 		return

@@ -67,6 +67,8 @@ func build() -> void:
 				add_model(ROADS + "road-straight.glb", Transform3D(sc, p))
 			elif rj:
 				add_model(ROADS + "road-straight.glb", Transform3D(Basis(Vector3.UP, PI * 0.5) * sc, p))
+			if ri or rj:
+				gate_spots.append(p + Vector3(0, 0.1, 0))
 	# blocks of old buildings
 	for bx in 4:
 		for bz in 4:

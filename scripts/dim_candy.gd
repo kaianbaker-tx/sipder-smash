@@ -94,6 +94,7 @@ func build() -> void:
 			var name: String = HOUSES[rng.randi() % HOUSES.size()]
 			add_building(SUB + "building-type-%s.glb" % name, hp, a + PI, Vector3.ONE * 10.0, {"windows": 1.0, "use_custom": 1.0}, Color(wall.r, wall.g, wall.b, shift))
 		safe_spots.append(c + free_dir * r * 0.5 + Vector3(0, 0.2, 0))
+		gate_spots.append(c + free_dir * r * 0.5 + Vector3(0, 0.2, 0))
 		# trees and a fence ring
 		for t in int(r / 4.0):
 			var a2 := rng.randf() * TAU

@@ -13,6 +13,7 @@ const RETICLE := preload("res://assets/ui/reticle.png")
 var player: Player
 var rig: CamRig
 var track: Array = []           # enemies to point at
+var goal: Node3D                # the open portal, if any
 var boss: Node3D
 
 var _hearts: Array[TextureRect] = []
@@ -494,6 +495,35 @@ func _draw_overlay() -> void:
 			_overlay.draw_colored_polygon(tri, Color(1, 0.2, 0.5))
 			tri.append(tri[0])
 			_overlay.draw_polyline(tri, Color(0.05, 0, 0.08), 3.0)
+	# the open portal: a big cyan marker, or an arrow at the screen edge
+	if goal and is_instance_valid(goal):
+		var gp: Vector3 = goal.global_position + Vector3(0, 16.5, 0)
+		var gdist := gp.distance_to(player.global_position)
+		var gbehind := cam.is_position_behind(gp)
+		var gs := cam.unproject_position(gp)
+		var pulse := 1.0 + sin(Time.get_ticks_msec() / 150.0) * 0.15
+		if not gbehind and gs.x > 40 and gs.y > 40 and gs.x < vp.x - 40 and gs.y < vp.y - 40:
+			var s := 14.0 * pulse
+			var tri := PackedVector2Array([gs + Vector2(-s, -s * 1.4), gs + Vector2(s, -s * 1.4), gs])
+			_overlay.draw_colored_polygon(tri, Color(0.2, 1, 1))
+			tri.append(tri[0])
+			_overlay.draw_polyline(tri, Color(0.05, 0, 0.08), 3.0)
+			_overlay.draw_string(font, gs + Vector2(-40, -s * 1.4 - 6), "%dm" % int(gdist), HORIZONTAL_ALIGNMENT_CENTER, 80, 22, Color(0.2, 1, 1))
+		else:
+			var c := vp * 0.5
+			var dir := gs - c
+			if gbehind:
+				dir = -dir
+			if dir.length() < 1.0:
+				dir = Vector2(0, 1)
+			dir = dir.normalized()
+			var edge := c + Vector2(dir.x * vp.x * 0.4, dir.y * vp.y * 0.36)
+			var a := dir.angle()
+			var tri := PackedVector2Array([edge + Vector2(30, 0).rotated(a) * pulse, edge + Vector2(-14, 20).rotated(a) * pulse, edge + Vector2(-14, -20).rotated(a) * pulse])
+			_overlay.draw_colored_polygon(tri, Color(0.2, 1, 1))
+			tri.append(tri[0])
+			_overlay.draw_polyline(tri, Color(0.05, 0, 0.08), 4.0)
+			_overlay.draw_string(font, edge - dir * 34.0 + Vector2(-50, 8), "PORTAL", HORIZONTAL_ALIGNMENT_CENTER, 100, 22, Color(0.2, 1, 1))
 	# spider-sense: wiggly lines around the hero's head
 	if player.spider_sense > 0.05:
 		var head := player.global_position + Vector3(0, 2.0, 0)
