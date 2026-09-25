@@ -152,8 +152,8 @@ func is_paused_open() -> bool:
 	return _pause.visible
 
 
-func show_win(time_s: float) -> void:
+func show_win(time_s: float, dims := 0) -> void:
 	var m := int(time_s) / 60
 	var s := int(time_s) % 60
-	_win_stats.text = "SCORE: %d\nBOTS SMASHED: %d\nBEST COMBO: x%d\nSPIDER TOKENS: %d\nTIME: %d:%02d" % [Game.score, Game.bots_smashed, Game.best_combo, Game.tokens, m, s]
+	_win_stats.text = "SCORE: %d\nBOTS SMASHED: %d\nDIMENSIONS SAVED: %d\nBEST COMBO: x%d\nSPIDER TOKENS: %d\nTIME: %d:%02d" % [Game.score, Game.bots_smashed, dims, Game.best_combo, Game.tokens, m, s]
 	_win.visible = true

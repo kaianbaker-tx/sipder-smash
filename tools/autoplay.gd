@@ -114,6 +114,18 @@ func _autopilot(delta: float) -> void:
 		if d < bd:
 			bd = d
 			best = e
+	# a portal is open and nothing to fight: walk into it
+	if not best and main.gate and is_instance_valid(main.gate) and not main.get_tree().paused:
+		var gc: Vector3 = main.gate.centre()
+		var flat := Vector3(gc.x - p.global_position.x, 0, gc.z - p.global_position.z)
+		if flat.length() > 25.0 or absf(gc.y - p.global_position.y) > 12.0:
+			# test shortcut: hop next to the portal
+			p.global_position = main.gate.global_position - flat.normalized() * 10.0 + Vector3(0, 1.0, 0)
+			p.velocity = Vector3.ZERO
+			flat = Vector3(gc.x - p.global_position.x, 0, gc.z - p.global_position.z)
+		rig.yaw = atan2(-flat.x, -flat.z)
+		Input.action_press("move_forward")
+		return
 	if best:
 		var to := best.global_position - rig.cam.global_position
 		rig.yaw = atan2(-to.x, -to.z)
@@ -184,5 +196,5 @@ func _process(delta: float) -> void:
 		var img := get_viewport().get_texture().get_image()
 		img.save_png("%s/%s_%02d.png" % [shots_dir, script_name, _next_shot])
 		var p: Node = main.player
-		print("shot ", _next_shot, " t=", snappedf(t, 0.01), " ch=", main.chapter, " state=", p.state, " hp=", p.hp, " pos=", p.global_position.snapped(Vector3.ONE * 0.1), " bots=", get_tree().get_nodes_in_group("enemies").size(), " score=", Game.score, " fps=", Engine.get_frames_per_second(), " draws=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME), " prims=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME), " objs=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME))
+		print("shot ", _next_shot, " t=", snappedf(t, 0.01), " ch=", main.chapter, " state=", p.state, " hp=", p.hp, " pos=", p.global_position.snapped(Vector3.ONE * 0.1), " bots=", get_tree().get_nodes_in_group("enemies").size(), " score=", Game.score, " dim=", (main.dim.title if main.dim else "home"), " gate=", main.gate != null, " fps=", Engine.get_frames_per_second(), " draws=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME), " prims=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME), " objs=", RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME))
 		_next_shot += 1

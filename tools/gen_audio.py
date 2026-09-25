@@ -455,8 +455,20 @@ def beat_title():
     save("title_beat", np.tanh(out), folder="music", peak=0.8)
 
 
+def sfx_dimensions():
+    """Sounds added with the dimensions. Made last so the older sounds keep
+    the same random noise."""
+    # THUNDER: a rolling boom for the Noir-Verse lightning
+    d = 2.4
+    t = t_(d)
+    x = lp(noise(d), 180) * (np.exp(-t * 1.6) + 0.4 * np.exp(-((t - 0.5) ** 2) * 12))
+    x += lp(noise(d), 900) * np.exp(-t * 8) * 0.4
+    save("thunder", np.tanh(x * 3), peak=0.8)
+
+
 if __name__ == "__main__":
     sfx()
     beat_city()
     beat_boss()
     beat_title()
+    sfx_dimensions()

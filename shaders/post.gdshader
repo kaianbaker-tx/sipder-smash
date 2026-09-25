@@ -9,6 +9,7 @@ uniform sampler2D screen_tex : hint_screen_texture, filter_linear;
 uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 
 global uniform float noir;
+global uniform float noir_keep;
 global uniform float world_time;
 
 uniform float line_px = 1.4;
@@ -120,7 +121,7 @@ void fragment() {
 
 	// noir mode
 	float lum3 = dot(col, vec3(0.299, 0.587, 0.114));
-	col = mix(col, vec3(smoothstep(0.03, 0.85, lum3)), noir);
+	col = mix(col, vec3(smoothstep(0.03, 0.85, lum3)), noir * (1.0 - noir_keep));
 
 	col = mix(col, vec3(0.03, 0.0, 0.05), fade);
 	ALBEDO = col;

@@ -125,3 +125,11 @@ portal_power={
 "type": "float",
 "value": 1.0
 }
+portal_size={
+"type": "float",
+"value": 0.16
+}
+noir_keep={
+"type": "float",
+"value": 0.0
+}

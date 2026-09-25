@@ -18,6 +18,8 @@ global uniform float fog_start;
 global uniform float fog_end;
 global uniform float dot_size;
 global uniform float noir;
+// 1 in the Noir-Verse: heroes and bots keep their colours in the grey world
+global uniform float noir_keep;
 global uniform float world_time;
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, repeat_enable;
@@ -185,7 +187,7 @@ void fragment() {
 
 	// noir mode: black and white comic
 	float lum = dot(col, vec3(0.299, 0.587, 0.114));
-	col = mix(col, vec3(smoothstep(0.02, 0.8, lum)), noir);
+	col = mix(col, vec3(smoothstep(0.02, 0.8, lum)), noir * (1.0 - character * noir_keep));
 	// noir heroes get a bright white rim so they never vanish in the dark
 	col += vec3(1.0) * smoothstep(0.3, 0.45, fres) * character * noir * 0.8;
 

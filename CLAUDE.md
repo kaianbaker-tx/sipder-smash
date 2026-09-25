@@ -17,6 +17,11 @@ what he meant. Short sentences, one idea at a time.
   `shaders/post.gdshader` (ink lines, red/blue misprint). Colors live in
   `[shader_globals]` in `project.godot`.
 - Hero: `scripts/player.gd` (moves) and `scripts/hero_model.gd` (poses).
+- Dimensions: `scripts/dimension.gd` is the base; `dim_noir.gd`,
+  `dim_candy.gd` and `dim_glitch.gd` build them far from the city. Each has
+  its own colours (`palette`), bots (`bot_plan`) and respawn spots.
+  `scripts/gate.gd` is the walk-through portal. Story: chapters 1-2 in the
+  city, 3 Noir-Verse, 4 Candy-Verse, 5 Glitch-Verse + Glitch King.
 - Suits, logo, signs and sounds are made by `tools/gen_suits.py`,
   `tools/gen_ui.py` and `tools/gen_audio.py`. Edit those, then re-run them.
 - `tools/check.sh` checks every script. `tools/autoplay.gd` plays the game

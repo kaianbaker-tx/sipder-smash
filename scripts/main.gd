@@ -1,6 +1,7 @@
 extends Node3D
 ## Spideys of the Multiverse director: builds the world, runs the title screen,
-## the story chapters, the boss fight and the win screen.
+## the story chapters, the trips through the portals to other dimensions, the
+## boss fight in the Glitch-Verse and the win screen.
 
 enum Mode { TITLE, PLAY, WIN }
 
@@ -20,6 +21,14 @@ var title_cam: Camera3D
 var boss: GlitchKing
 var cover: CanvasLayer
 var race: Node3D
+var birds: Node3D
+var dims: Array = [null, null, null]   # built the first time you visit
+var dim: Dimension                     # where we are now (null = home city)
+var gate: Gate                         # the open portal, if any
+var _gate_to := -1                     # which dimension it leads to (-1 = home)
+var _home_nodes: Array = []
+var _roam_next := 0
+var _dims_visited := 0
 
 var mode := Mode.TITLE
 var chapter := 0
@@ -40,6 +49,10 @@ var _boss_started := false
 var _was_captured := false
 
 const START := Vector3(8, 1, 40)
+const DIM_SCRIPTS := ["res://scripts/dim_noir.gd", "res://scripts/dim_candy.gd", "res://scripts/dim_glitch.gd"]
+# each dimension sits far away from the city (and from each other)
+const DIM_POS := [Vector3(4000, 0, 0), Vector3(0, 0, 4000), Vector3(-4000, 0, 0)]
+const DIM_NAMES := ["NOIR-VERSE", "CANDY-VERSE", "GLITCH-VERSE"]
 
 
 func _ready() -> void:
@@ -60,7 +73,7 @@ func _ready() -> void:
 	tokens.name = "Tokens"
 	add_child(tokens)
 	tokens.setup(city)
-	var birds: Node3D = load("res://scripts/birds.gd").new()
+	birds = load("res://scripts/birds.gd").new()
 	birds.name = "Birds"
 	add_child(birds)
 	race = load("res://scripts/ring_rush.gd").new()
@@ -72,6 +85,7 @@ func _ready() -> void:
 	add_child(portal)
 	portal.global_position = city.tower_top + Vector3(0, 60, 0)
 	RenderingServer.global_shader_parameter_set("portal_power", 0.0)
+	_home_nodes = [city, traffic, people, tokens, birds, race, portal]
 
 	player = Player.new()
 	player.name = "Player"
@@ -136,6 +150,8 @@ func _ready() -> void:
 			_start_game()
 			if Game.args.has("chapter"):
 				_skip_to(Game.args.chapter.to_int())
+			if Game.args.has("dim"):
+				_travel(_get_dim(Game.args.dim.to_int()))
 			if Game.args.autoplay == "race":
 				hud._captions.clear()
 				_chapter_wait = 0.0
@@ -202,6 +218,9 @@ func _pick_title_spot() -> void:
 
 func _to_title() -> void:
 	mode = Mode.TITLE
+	if dim:
+		_travel(null)
+	_close_gate()
 	Sfx.set_wind(0.0)
 	Game.playing = false
 	get_tree().paused = false
@@ -218,6 +237,7 @@ func _to_title() -> void:
 	_chapter_wait = 0.0
 	_free_roam = false
 	chapter = 0
+	_dims_visited = 0
 	title_ui.visible = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_pick_title_spot()
@@ -261,7 +281,7 @@ func _start_game() -> void:
 	rig.pitch = -0.1
 	look.attach(rig.cam)
 	rig.cam.current = true
-	RenderingServer.global_shader_parameter_set("sun_dir", Vector3(0.55, 0.42, 0.72).normalized())
+	look.apply_palette({})
 	_capture()
 	_play_time = 0.0
 	_free_roam = false
@@ -271,8 +291,8 @@ func _start_game() -> void:
 	hud.narrate([
 		"Okay. Let's do this one more time...",
 		"A GLITCH PORTAL just ripped open above the city!",
-		"Robots from other dimensions are pouring out...",
-		"Only one spider can smash them all. YOU!",
+		"Robots from other DIMENSIONS are pouring out...",
+		"Only one spider can chase them across the multiverse. YOU!",
 	], 2.4)
 	_chapter_wait = 9.8
 
@@ -298,19 +318,11 @@ func _next_chapter() -> void:
 			hud.set_objective("SWING 3 TIMES  (0/3)")
 		2:
 			hud.chapter_card("CHAPTER 2", "BOT BLITZ!")
-			hud.narrate(["Glitch-Bots are all over downtown!", "Follow the pink arrows. Smash 'em!"], 2.6)
-			_spawn_wave(11, false, true, Vector3.INF, 3)
+			hud.narrate(["Glitch-Bots are ALL OVER the city!", "Follow the pink arrows. Smash 'em!", "Watch out for SPEEDY bots and MEGA-BOTS!"], 2.6)
+			_spawn_group([["normal", 14], ["speedy", 5], ["big", 3]], null)
 			hud.set_hint_visible(false)
-			hud.narrate(["Watch out for the little green SPEEDY bots!"], 2.6)
-		3:
-			hud.chapter_card("CHAPTER 3", "BIG TROUBLE")
-			hud.narrate(["Uh oh. The MEGA-BOTS are here.", "Web them up first, then SMASH!"], 2.6)
-			_spawn_wave(3, true)
-			_spawn_wave(5, false, false)
-		4:
-			hud.chapter_card("CHAPTER 4", "THE GLITCH KING")
-			hud.narrate(["Meanwhile... at the top of GLITCH TOWER!"], 2.6)
-			get_tree().create_timer(2.4).timeout.connect(_start_boss)
+		3, 4, 5:
+			_enter_dimension(chapter - 3)
 
 
 func _process(delta: float) -> void:
@@ -350,15 +362,11 @@ func _process(delta: float) -> void:
 	match chapter:
 		1:
 			_chapter1()
-		2, 3:
+		2, 3, 4, 5:
 			_wave_progress()
 	if _free_roam:
 		_roam(delta)
-	hud.track = objective_bots
-	# fell off the tower during the boss fight? back up you go
-	if boss and is_instance_valid(boss) and not boss.dead and player.global_position.y < city.tower_top.y - 70.0:
-		player.respawn(city.tower_top + Vector3(0, 2, 0))
-		hud.narrate(["Whoa, long way down! Back to the top!"], 2.0)
+	hud.track = [gate] if gate else objective_bots
 
 
 var _hint_t := 0.0
@@ -387,7 +395,7 @@ func _chapter1() -> void:
 				step = 2
 				Game.say("THWIP-TASTIC!", 1.6)
 				hud.narrate(["Here they come! LEFT CLICK to SMASH. F shoots web!"], 3.5)
-				_spawn_wave(4, false, true, player.global_position)
+				_spawn_wave(6, false, true, player.global_position)
 		2:
 			_wave_progress()
 
@@ -399,14 +407,25 @@ func _wave_progress() -> void:
 			alive.append(b)
 	objective_bots = alive
 	var done := _obj_total - alive.size()
-	var what := "MEGA-BOTS" if chapter == 3 else "GLITCH-BOTS"
-	hud.set_objective("SMASH %s  (%d/%d)" % [what, done, _obj_total])
+	if _obj_total > 0:
+		var where := dim.title if dim else "CITY"
+		hud.set_objective("%s: SMASH THE BOTS  (%d/%d)" % [where, done, _obj_total])
 	if alive.is_empty() and _obj_total > 0:
 		_obj_total = 0
 		hud.set_objective("")
 		Sfx.play("cheer")
 		Game.say(["AMAZING!", "SPECTACULAR!", "SPIDER-TASTIC!"][chapter % 3], 2.0)
-		_chapter_wait = 2.5
+		match chapter:
+			1:
+				_chapter_wait = 2.5
+			2, 3, 4:
+				# the bots came from somewhere... follow them!
+				get_tree().create_timer(1.6).timeout.connect(func() -> void:
+					if mode == Mode.PLAY and not _free_roam:
+						_open_gate(chapter - 2))
+			5:
+				hud.narrate(["The ground is shaking...", "HERE COMES THE GLITCH KING!"], 1.8)
+				get_tree().create_timer(3.4).timeout.connect(_start_boss)
 
 
 # ------------------------------------------------------------------ bots
@@ -442,6 +461,38 @@ func _spawn_wave(count: int, big: bool, objective := true, near := Vector3.INF, 
 	Sfx.play("glitch", 0.1)
 
 
+## A big mixed group of objective bots: plan = [["normal", 10], ["speedy", 3], ["big", 2]].
+## d = the dimension to fill, or null for the home city.
+func _spawn_group(plan: Array, d: Dimension) -> void:
+	var spots: Array = d.global_bot_spots() if d else _city_spots()
+	spots.shuffle()
+	var from := d.to_global(Vector3(0, 90, 0)) if d else portal.global_position
+	objective_bots = []
+	var i := 0
+	for entry in plan:
+		for k in (entry[1] as int):
+			var b := GlitchBot.new()
+			b.big = entry[0] == "big"
+			b.speedy = entry[0] == "speedy"
+			add_child(b)
+			var home: Vector3 = (spots[i % spots.size()] as Vector3) + Vector3(randf_range(-5, 5), randf_range(0, 5), randf_range(-5, 5))
+			b.global_position = from.lerp(home, 0.8) + Vector3(randf_range(-6, 6), 0, randf_range(-6, 6))
+			b.home = home
+			objective_bots.append(b)
+			i += 1
+	_obj_total = i
+	Fx.glitch(0.6)
+	Sfx.play("glitch", 0.1)
+
+
+func _city_spots() -> Array:
+	var out := []
+	for s in city.roof_spots:
+		if (s as Vector3).length() < 170.0:
+			out.append((s as Vector3) + Vector3(0, 8.0 + randf() * 8.0, 0))
+	return out
+
+
 func _clear_bots() -> void:
 	for e in get_tree().get_nodes_in_group("enemies"):
 		(e as Node).queue_free()
@@ -452,33 +503,166 @@ func _clear_bots() -> void:
 func _roam(delta: float) -> void:
 	_roam_t -= delta
 	if _roam_t <= 0.0:
-		_roam_t = 20.0
-		if get_tree().get_nodes_in_group("enemies").size() < 8:
-			_spawn_wave(3, randf() < 0.25, false)
-	hud.set_objective("FREE ROAM!  Tokens: %d   Bots: %d" % [Game.tokens, Game.bots_smashed])
+		_roam_t = 15.0
+		if get_tree().get_nodes_in_group("enemies").size() < 12:
+			if dim:
+				var spots := dim.global_bot_spots()
+				for i in 4:
+					var b := GlitchBot.new()
+					b.speedy = randf() < 0.3
+					b.big = randf() < 0.15
+					add_child(b)
+					b.global_position = spots[randi() % spots.size()]
+					b.home = b.global_position
+			else:
+				_spawn_wave(5, randf() < 0.25, false)
+	var where := dim.title if dim else "THE CITY"
+	hud.set_objective("FREE ROAM in %s!  Tokens: %d   Bots: %d" % [where, Game.tokens, Game.bots_smashed])
+
+
+# ------------------------------------------------------------------ dimensions
+
+func _get_dim(i: int) -> Dimension:
+	if dims[i] == null:
+		var d: Dimension = load(DIM_SCRIPTS[i]).new()
+		d.name = DIM_NAMES[i]
+		add_child(d)
+		d.position = DIM_POS[i]
+		d.ensure_built()
+		d.visible = false
+		d.process_mode = Node.PROCESS_MODE_DISABLED
+		dims[i] = d
+	return dims[i]
+
+
+## Jump to a dimension (or home when d is null): swap the visible world,
+## the colours and the music, and drop the hero at the start.
+func _travel(d: Dimension) -> void:
+	Fx.glitch(1.0)
+	Fx.impact(1.0)
+	Sfx.play("zip")
+	Sfx.play("glitch")
+	_clear_bots()
+	_close_gate()
+	hud.set_race("")
+	var home := d == null
+	for n in _home_nodes:
+		(n as Node3D).visible = home
+		(n as Node).process_mode = Node.PROCESS_MODE_INHERIT if home else Node.PROCESS_MODE_DISABLED
+	for other in dims:
+		if other:
+			(other as Dimension).visible = other == d
+			(other as Dimension).process_mode = Node.PROCESS_MODE_INHERIT if other == d else Node.PROCESS_MODE_DISABLED
+	dim = d
+	player.area = d
+	look.apply_palette(d.palette if d else {})
+	if d:
+		player.respawn(d.to_global(d.start_pos))
+		rig.yaw = atan2(-d.start_look.x, -d.start_look.z)
+		rig.pitch = -0.1
+		Sfx.music(d.music)
+	else:
+		Sfx.music("city")
+	rig.snap()
+
+
+func _enter_dimension(i: int) -> void:
+	var d := _get_dim(i)
+	_travel(d)
+	_dims_visited = maxi(_dims_visited, i + 1)
+	hud.chapter_card("DIMENSION %d" % (i + 1) if i < 2 else "THE FINAL DIMENSION", d.title)
+	hud.narrate(d.intro, 2.6)
+	if i == 2 and Game.args.has("boss"):
+		get_tree().create_timer(1.0).timeout.connect(_start_boss)
+		return
+	_spawn_group(d.bot_plan, d)
+
+
+## Open a portal a few steps in front of the hero, on open ground.
+func _open_gate(to: int) -> void:
+	_close_gate()
+	gate = Gate.new()
+	gate.label_text = ("TO THE %s!" % DIM_NAMES[to]) if to >= 0 else "BACK HOME!"
+	var chest := player.global_position + Vector3(0, 1.5, 0)
+	var space := get_world_3d().direct_space_state
+	var place := player.global_position + rig.forward() * 14.0
+	for dir: Vector3 in [rig.forward(), -rig.forward(), rig.right(), -rig.right()]:
+		var q := PhysicsRayQueryParameters3D.create(chest, chest + dir * 18.0, 1)
+		q.exclude = [player.get_rid()]
+		if space.intersect_ray(q).is_empty():
+			place = player.global_position + dir * 14.0
+			break
+	var down := PhysicsRayQueryParameters3D.create(place + Vector3(0, 4, 0), place + Vector3(0, -30, 0), 1)
+	var hit := space.intersect_ray(down)
+	if hit:
+		place = hit.position
+	add_child(gate)
+	gate.global_position = place
+	_gate_to = to
+	gate.entered.connect(_on_gate)
+	if not _free_roam:
+		hud.set_objective("JUMP INTO THE PORTAL!")
+		Game.say("A PORTAL OPENED!", 2.0)
+		hud.narrate(["The bots came from ANOTHER DIMENSION!", "Jump into the portal and go after them!"] if to >= 0 else ["Portal home is open!"], 2.4)
+	Sfx.play("glitch")
+	Fx.glitch(0.5)
+
+
+func _close_gate() -> void:
+	if gate and is_instance_valid(gate):
+		gate.queue_free()
+	gate = null
+
+
+func _on_gate() -> void:
+	var to := _gate_to
+	_close_gate()
+	if _free_roam:
+		if to < 0:
+			_travel(null)
+			player.respawn(_title_spot - _title_look * 2.0 + Vector3(0, 0.5, 0))
+			rig.yaw = atan2(_title_look.x, _title_look.z)
+			rig.snap()
+			hud.chapter_card("BACK HOME", "THE CITY")
+			_roam_next = (_roam_next + 1) % 3
+			get_tree().create_timer(2.5).timeout.connect(func() -> void:
+				if _free_roam and not dim:
+					_open_gate(_roam_next))
+		else:
+			var d := _get_dim(to)
+			_travel(d)
+			hud.chapter_card("FREE ROAM", d.title)
+			_roam_t = 1.0
+			get_tree().create_timer(1.5).timeout.connect(func() -> void:
+				if _free_roam and dim == d:
+					_open_gate(-1))
+		return
+	_next_chapter()
 
 
 # ------------------------------------------------------------------ boss
 
 func _start_boss() -> void:
-	if mode != Mode.PLAY or chapter != 4 or _boss_started:
+	if mode != Mode.PLAY or chapter != 5 or _boss_started or not dim:
 		return
 	_boss_started = true
+	var arena := dim.to_global(dim.arena)
 	Fx.impact(1.0)
-	player.respawn(city.tower_top + Vector3(0, 1.5, 12))
+	player.respawn(arena + Vector3(0, 1.5, 14))
 	rig.yaw = 0.0
+	rig.snap()
 	Sfx.music("boss")
 	boss = GlitchKing.new()
 	add_child(boss)
-	boss.arena = city.tower_top
-	boss.global_position = city.tower_top + Vector3(0, 16, -6)
+	boss.arena = arena
+	boss.global_position = arena + Vector3(0, 16, -6)
 	boss.defeated.connect(_boss_defeated)
 	boss.wants_minions.connect(func(n: int, at: Vector3) -> void:
 		for i in n:
 			var b := GlitchBot.new()
 			add_child(b)
 			b.global_position = at + Vector3(randf_range(-6, 6), 2, randf_range(-6, 6))
-			b.home = city.tower_top + Vector3(randf_range(-15, 15), 8, randf_range(-15, 15)))
+			b.home = boss.arena + Vector3(randf_range(-18, 18), 8, randf_range(-18, 18)))
 	hud.set_boss(boss)
 	hud.set_objective("DEFEAT THE GLITCH KING!")
 	Sfx.play("boss_roar")
@@ -515,21 +699,42 @@ func _celebrate(seconds: float) -> void:
 func _boss_defeated() -> void:
 	hud.set_boss(null)
 	hud.set_objective("")
-	portal.close()
 	_clear_bots()
-	_celebrate(14.0)
 	Sfx.music("")
 	Sfx.play("win")
-	Sfx.play("cheer")
 	Game.say("YOU DID IT!!!", 3.0)
-	get_tree().create_timer(5.5).timeout.connect(func() -> void:
+	hud.narrate(["The Glitch-Verse is falling apart!", "Time to go HOME!"], 1.6)
+	# a few fireworks in the Glitch-Verse, then the trip home
+	for i in 6:
+		get_tree().create_timer(i * 0.3).timeout.connect(func() -> void:
+			Fx.firework(player.global_position + Vector3(randf_range(-40, 40), randf_range(20, 50), randf_range(-40, 40))))
+	get_tree().create_timer(3.4).timeout.connect(_come_home)
+
+
+func _come_home() -> void:
+	if mode != Mode.PLAY:
+		return
+	_travel(null)
+	player.respawn(_title_spot - _title_look * 2.0 + Vector3(0, 0.5, 0))
+	rig.yaw = atan2(_title_look.x, _title_look.z)
+	rig.pitch = 0.15
+	rig.snap()
+	hud.chapter_card("BACK HOME", "THE CITY IS SAVED!")
+	Sfx.music("")
+	Sfx.play("cheer")
+	get_tree().create_timer(1.2).timeout.connect(func() -> void:
+		portal.close()
+		Sfx.play("glitch")
+		Game.say("THE PORTAL IS CLOSED!", 2.5))
+	_celebrate(16.0)
+	get_tree().create_timer(6.5).timeout.connect(func() -> void:
 		if mode != Mode.PLAY:
 			return
 		mode = Mode.WIN
 		player.enabled = false
 		player.velocity = Vector3.ZERO
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		menus.show_win(_play_time))
+		menus.show_win(_play_time, _dims_visited))
 
 
 func _keep_playing() -> void:
@@ -540,7 +745,9 @@ func _keep_playing() -> void:
 	chapter = 99
 	Sfx.music("city")
 	_capture()
-	hud.narrate(["The city is yours. Swing free, find every token!", "Try RING RUSH: fly through the pink ring over the park!"], 3.0)
+	hud.narrate(["The city is yours. Swing free, find every token!", "Jump in the portal to visit the other dimensions!", "Try RING RUSH: fly through the pink ring over the park!"], 3.0)
+	_roam_next = 0
+	_open_gate(0)
 
 
 # ------------------------------------------------------------------ pause / input
@@ -560,13 +767,16 @@ func _set_paused(p: bool) -> void:
 
 func _radar_things() -> Array:
 	var out: Array = []
-	out.append([city.tower_pos, Color(0.7, 0.4, 1.0), 6.0, true])
-	if race and not race.active:
-		out.append([race.start_ring.global_position, Color(1, 0.3, 0.6), 5.0, false])
-	var me := player.global_position
-	for i in tokens.spots.size():
-		if not tokens.taken[i] and tokens.spots[i].distance_to(me) < 150.0:
-			out.append([tokens.spots[i], Color(1, 0.85, 0.2), 2.5, false])
+	if gate:
+		out.append([gate.global_position, Color(0.2, 1.0, 1.0), 7.0, true])
+	if not dim:
+		out.append([city.tower_pos, Color(0.7, 0.4, 1.0), 6.0, true])
+		if race and not race.active:
+			out.append([race.start_ring.global_position, Color(1, 0.3, 0.6), 5.0, false])
+		var me := player.global_position
+		for i in tokens.spots.size():
+			if not tokens.taken[i] and tokens.spots[i].distance_to(me) < 150.0:
+				out.append([tokens.spots[i], Color(1, 0.85, 0.2), 2.5, false])
 	for e in get_tree().get_nodes_in_group("enemies"):
 		var big: bool = e is GlitchKing or ("big" in e and e.big)
 		out.append([(e as Node3D).global_position, Color(1, 0.2, 0.5), 5.0 if big else 3.5, true])

@@ -37,6 +37,13 @@ func _ready() -> void:
 		global_position = _follow
 
 
+## Jump straight to the target (after a teleport) instead of gliding there.
+func snap() -> void:
+	if target:
+		_follow = target.global_position + Vector3(0, 2.1, 0)
+		global_position = _follow
+
+
 func shake(amount: float) -> void:
 	_shake = maxf(_shake, amount)
 

@@ -16,9 +16,21 @@ var scale_3d := 1.0
 var _fps_t := 0.0
 var _fps_frames := 0
 var _slow := 0
+# the home city's colours (from project.godot) and noir switches
+var home_palette := {}
+var _suit_noir := false
+var _palette_noir := 0.0
 
 
 func _ready() -> void:
+	for prop in ProjectSettings.get_property_list():
+		var n: String = prop.name
+		if n.begins_with("shader_globals/"):
+			var key := n.trim_prefix("shader_globals/")
+			if key in ["world_time", "dot_size", "noir"]:
+				continue
+			home_palette[key] = (ProjectSettings.get_setting(n) as Dictionary).value
+	home_palette["portal_power"] = 0.0
 	var we := WorldEnvironment.new()
 	env = Environment.new()
 	env.background_mode = Environment.BG_SKY
@@ -88,8 +100,22 @@ func hurt(strength := 1.0) -> void:
 	_hurt = maxf(_hurt, strength)
 
 
+## The black-and-white Noir suit.
 func set_noir(on: bool) -> void:
-	RenderingServer.global_shader_parameter_set("noir", 1.0 if on else 0.0)
+	_suit_noir = on
+	_apply_noir()
+
+
+## Switch every world colour at once (a dimension's palette, or {} for home).
+func apply_palette(p: Dictionary) -> void:
+	for k in home_palette:
+		RenderingServer.global_shader_parameter_set(k, p.get(k, home_palette[k]))
+	_palette_noir = p.get("noir", 0.0)
+	_apply_noir()
+
+
+func _apply_noir() -> void:
+	RenderingServer.global_shader_parameter_set("noir", maxf(_palette_noir, 1.0 if _suit_noir else 0.0))
 
 
 func _process(delta: float) -> void:

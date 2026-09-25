@@ -1,0 +1,26 @@
+mesh res://assets/industrial/building-a.glb
+  boxes
+  ok 3
+mesh res://assets/industrial/building-c.glb
+  boxes
+  ok 8
+mesh res://assets/industrial/building-f.glb
+  boxes
+  ok 6
+mesh res://assets/industrial/building-m.glb
+  boxes
+  ok 4
+mesh res://assets/city/building-i.glb
+  boxes
+  ok 2
+mesh res://assets/roads/road-crossroad-line.glb
+  boxes
+  ok 1
+mesh res://assets/roads/light-curved.glb
+  boxes
+  ok 0
+mesh res://assets/cars/truck.glb
+  boxes
+  ok 6
+load noir
+new noir

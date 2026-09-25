@@ -11,6 +11,7 @@ global uniform float noir;
 global uniform float world_time;
 global uniform vec3 portal_dir;
 global uniform float portal_power;
+global uniform float portal_size;
 
 uniform vec3 moon_dir = vec3(-0.45, 0.42, -0.78);
 
@@ -101,10 +102,10 @@ void sky() {
 	if (portal_power > 0.0) {
 		vec3 pd = normalize(portal_dir);
 		float pdot = dot(dir, pd);
-		if (pdot > 0.9) {
+		if (pdot > 0.3) {
 			vec3 px = normalize(cross(pd, vec3(0.0, 1.0, 0.0)));
 			vec3 py = cross(px, pd);
-			vec2 q = vec2(dot(dir, px), dot(dir, py)) / 0.16;
+			vec2 q = vec2(dot(dir, px), dot(dir, py)) / portal_size;
 			float r = length(q);
 			float a = atan(q.y, q.x);
 			float swirl = sin(a * 5.0 + r * 12.0 - world_time * 3.0);
