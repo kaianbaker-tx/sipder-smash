@@ -1,9 +1,10 @@
 extends Node
-## Sets up the Spider-Verse look: comic sky, environment and the full-screen
-## comic pass (ink lines, misprint, speed lines, impact frames).
-## Other scripts poke `post` (the ShaderMaterial) to trigger effects.
+## Sets up the Spider-Verse look: comic sky, environment, the 3D ink-line
+## pass (`post`) and the 2D finishing pass (`fx`: misprint, speed lines,
+## impact frames, glitch). Other scripts call impact(), glitch(), hurt().
 
 var post: ShaderMaterial
+var fx: ShaderMaterial
 var quad: MeshInstance3D
 var env: Environment
 var _time := 0.0
@@ -58,6 +59,18 @@ func _ready() -> void:
 	quad.extra_cull_margin = 16384.0
 	quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	quad.sorting_offset = 1000.0
+
+	# the 2D finishing pass sits under all the HUD layers
+	var layer := CanvasLayer.new()
+	layer.layer = 1
+	add_child(layer)
+	var rect := ColorRect.new()
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fx = ShaderMaterial.new()
+	fx.shader = preload("res://shaders/screen_fx.gdshader")
+	rect.material = fx
+	layer.add_child(rect)
 
 
 ## Put the comic pass in front of a camera.
@@ -131,10 +144,10 @@ func _process(delta: float) -> void:
 	RenderingServer.global_shader_parameter_set("dot_size", maxf(3.0, h * vp.scaling_3d_scale / 150.0))
 	_auto_quality(delta)
 	# impact frames are short and hard: hold for two frames then snap off
-	post.set_shader_parameter("impact", 1.0 if _impact > 0.5 else 0.0)
+	fx.set_shader_parameter("impact", 1.0 if _impact > 0.5 else 0.0)
 	_impact = maxf(0.0, _impact - delta * 12.0)
-	post.set_shader_parameter("glitch", _glitch)
+	fx.set_shader_parameter("glitch", _glitch)
 	_glitch = move_toward(_glitch, 0.0, delta * 2.5)
-	post.set_shader_parameter("hurt", _hurt)
+	fx.set_shader_parameter("hurt", _hurt)
 	_hurt = move_toward(_hurt, 0.0, delta * 2.0)
-	post.set_shader_parameter("speed", speed)
+	fx.set_shader_parameter("speed", speed)

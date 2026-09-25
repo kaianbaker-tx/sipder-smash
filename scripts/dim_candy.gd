@@ -76,12 +76,15 @@ func build() -> void:
 		under.material_override = Toon.material(color_tex(Color(0.95, 0.55, 0.75)))
 		under.position = c - Vector3(0, 12.0 + r * 0.45, 0)
 		add_child(under)
-		safe_spots.append(c + Vector3(0, 0.2, 0))
-		# houses on the island
+		# houses on the island (small islands keep one side free for landing)
 		var n := 1 if r < 18.0 else (2 if i > 0 else 4)
+		var free_dir := Vector3.ZERO
 		for h in n:
 			var a := rng.randf() * TAU
-			var d := r * (0.45 if n > 1 else 0.0) + rng.randf_range(0.0, 3.0)
+			var d := r * 0.45 + rng.randf_range(0.0, 3.0)
+			if n == 1:
+				d = r * 0.35
+				free_dir = -Vector3(cos(a), 0, sin(a))
 			if i == 0:
 				a = h * TAU / n + 0.4
 				d = 17.0
@@ -90,6 +93,7 @@ func build() -> void:
 			var shift: float = [0.0, 0.5, 0.8, 0.3][rng.randi() % 4]
 			var name: String = HOUSES[rng.randi() % HOUSES.size()]
 			add_building(SUB + "building-type-%s.glb" % name, hp, a + PI, Vector3.ONE * 10.0, {"windows": 1.0, "use_custom": 1.0}, Color(wall.r, wall.g, wall.b, shift))
+		safe_spots.append(c + free_dir * r * 0.5 + Vector3(0, 0.2, 0))
 		# trees and a fence ring
 		for t in int(r / 4.0):
 			var a2 := rng.randf() * TAU

@@ -583,20 +583,8 @@ func _open_gate(to: int) -> void:
 	_close_gate()
 	gate = Gate.new()
 	gate.label_text = ("TO THE %s!" % DIM_NAMES[to]) if to >= 0 else "BACK HOME!"
-	var chest := player.global_position + Vector3(0, 1.5, 0)
-	var space := get_world_3d().direct_space_state
-	var place := player.global_position + rig.forward() * 14.0
-	for dir: Vector3 in [rig.forward(), -rig.forward(), rig.right(), -rig.right()]:
-		var q := PhysicsRayQueryParameters3D.create(chest, chest + dir * 18.0, 1)
-		q.exclude = [player.get_rid()]
-		if space.intersect_ray(q).is_empty():
-			place = player.global_position + dir * 14.0
-			break
-	var down := PhysicsRayQueryParameters3D.create(place + Vector3(0, 4, 0), place + Vector3(0, -30, 0), 1)
-	var hit := space.intersect_ray(down)
-	if hit:
-		place = hit.position
 	add_child(gate)
+	var place := _gate_spot()
 	gate.global_position = place
 	_gate_to = to
 	gate.entered.connect(_on_gate)
@@ -606,6 +594,43 @@ func _open_gate(to: int) -> void:
 		hud.narrate(["The bots came from ANOTHER DIMENSION!", "Jump into the portal and go after them!"] if to >= 0 else ["Portal home is open!"], 2.4)
 	Sfx.play("glitch")
 	Fx.glitch(0.5)
+
+
+## Somewhere solid and easy to reach for a new portal.
+func _gate_spot() -> Vector3:
+	var me := player.global_position
+	if dim:
+		# the nearest safe ground (street, roof, island) that isn't right under us
+		var best := dim.safe_spot(me) - Vector3(0, 1.5, 0)
+		var bd := INF
+		for sp in dim.safe_spots:
+			var g := dim.to_global(sp)
+			var d := g.distance_to(me)
+			if d >= 10.0 and d < bd:
+				bd = d
+				best = g
+		return best
+	# in the city: open ground a few steps ahead (or to a side), else a street
+	var chest := me + Vector3(0, 1.5, 0)
+	var space := get_world_3d().direct_space_state
+	for dir: Vector3 in [rig.forward(), -rig.forward(), rig.right(), -rig.right()]:
+		var q := PhysicsRayQueryParameters3D.create(chest, chest + dir * 18.0, 1)
+		q.exclude = [player.get_rid()]
+		if not space.intersect_ray(q).is_empty():
+			continue
+		var p := me + dir * 14.0
+		var down := PhysicsRayQueryParameters3D.create(p + Vector3(0, 4, 0), p + Vector3(0, -12, 0), 1)
+		var hit := space.intersect_ray(down)
+		if hit:
+			return hit.position
+	var best_s: Vector3 = city.street_nodes[0]
+	var bs := INF
+	for n in city.street_nodes:
+		var d := (n as Vector3).distance_to(me)
+		if d < bs:
+			bs = d
+			best_s = n
+	return best_s + Vector3(6, 0.3, 6)
 
 
 func _close_gate() -> void:
