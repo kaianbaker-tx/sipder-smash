@@ -81,6 +81,9 @@ func _ready() -> void:
 		"boss":
 			timeline = [[9.0, "quit", ""]]
 			shot_times = [3.0, 3.6, 4.4, 6.0, 8.0]
+		"gate":
+			timeline = [[0.5, "gate", "1"], [0.6, "lookgate", ""], [4.0, "quit", ""]]
+			shot_times = [1.5, 3.0]
 		"cover":
 			timeline = [[2.0, "tap", "cover"], [4.0, "quit", ""]]
 			shot_times = [3.5]
@@ -183,6 +186,13 @@ func _process(delta: float) -> void:
 				get_tree().create_timer(0.05).timeout.connect(func() -> void: Input.action_release(ev[2]))
 			"quit":
 				get_tree().quit()
+			"gate":
+				main._open_gate(int(ev[2]))
+			"lookgate":
+				var gc: Vector3 = main.gate.centre()
+				var to: Vector3 = gc - main.rig.global_position
+				main.rig.yaw = atan2(-to.x, -to.z)
+				main.rig.pitch = -0.05
 			"call":
 				main.call(ev[2])
 			"menu":

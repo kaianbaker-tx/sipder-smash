@@ -313,6 +313,13 @@ func _next_caption() -> void:
 	Sfx.play("click", 0.1)
 
 
+## Drop any lines still waiting (e.g. after jumping to a new dimension).
+func clear_captions() -> void:
+	_captions.clear()
+	_caption_t = 0.0
+	_caption_panel.visible = false
+
+
 func captions_busy() -> bool:
 	return _caption_t > 0.0 or not _captions.is_empty()
 

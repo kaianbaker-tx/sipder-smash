@@ -569,6 +569,7 @@ func _travel(d: Dimension) -> void:
 func _enter_dimension(i: int) -> void:
 	var d := _get_dim(i)
 	_travel(d)
+	hud.clear_captions()
 	_dims_visited = maxi(_dims_visited, i + 1)
 	hud.chapter_card("DIMENSION %d" % (i + 1) if i < 2 else "THE FINAL DIMENSION", d.title)
 	hud.narrate(d.intro, 2.6)
