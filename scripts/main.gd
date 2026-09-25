@@ -1,5 +1,5 @@
 extends Node3D
-## Spider Smash director: builds the world, runs the title screen,
+## Spideys of the Multiverse director: builds the world, runs the title screen,
 ## the story chapters, the boss fight and the win screen.
 
 enum Mode { TITLE, PLAY, WIN }

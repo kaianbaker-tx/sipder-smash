@@ -1,4 +1,4 @@
-"""Synthesize Spider Smash sound effects and hip-hop music loops.
+"""Synthesize Spideys of the Multiverse sound effects and hip-hop music loops.
 
 Run: python3 tools/gen_audio.py   (needs numpy + scipy)
 Writes WAV files into assets/sounds and assets/music.

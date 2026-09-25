@@ -1,5 +1,5 @@
-"""Paint UI art for Spider Smash: the logo, HUD icons, spider tokens,
-neon rooftop signs and wall graffiti.
+"""Paint UI art for Spideys of the Multiverse: the logo, loading splash,
+HUD icons, spider tokens, neon rooftop signs and wall graffiti.
 
 Run: python3 tools/gen_ui.py   (writes into assets/ui)
 """
@@ -46,8 +46,25 @@ def halftone(size, color, spacing=14, rmax=6, direction="diag"):
 
 # ------------------------------------------------------------------ logo
 
+def spider_emblem(d, cx, cy, s):
+    """The little ink spider that sits on the logo."""
+    for side in (-1, 1):
+        for k, (a, l) in enumerate([(-50, 1.0), (-15, 1.1), (20, 1.1), (55, 1.0)]):
+            ang = math.radians(a)
+            x1 = cx + side * s * 0.35
+            y1 = cy + s * 0.1 * (k - 1.5)
+            x2 = x1 + side * s * 0.7 * math.cos(ang) * l
+            y2 = y1 + s * 0.7 * math.sin(ang) * l - s * 0.3
+            x3 = x2 + side * s * 0.3
+            y3 = y2 + s * 0.6 * (1 if k > 1 else -1)
+            d.line([(cx, cy), (x1, y1), (x2, y2), (x3, y3)], fill=INK, width=int(s * 0.17), joint="curve")
+    d.ellipse((cx - s * 0.31, cy - s * 0.57, cx + s * 0.31, cy + s * 0.14), fill=INK)
+    d.ellipse((cx - s * 0.43, cy - s * 0.07, cx + s * 0.43, cy + s), fill=INK)
+
+
 def logo():
-    W, H = 1600, 700
+    """SPIDEYS / OF THE / MULTIVERSE! in extruded, misprinted comic letters."""
+    W, H = 1800, 1000
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
     def text_layer(txt, fnt, pos, fill, stroke=0, stroke_fill=None, rot=0):
@@ -58,58 +75,100 @@ def logo():
             lay = lay.rotate(rot, resample=Image.BICUBIC, center=pos)
         return lay
 
-    f1 = font(BANGERS, 300)
-    f2 = font(BANGERS, 340)
-    lines = [("SPIDER", (W // 2 - 20, 190), f1, -4), ("SMASH!", (W // 2 + 20, 470), f2, -4)]
-    for txt, pos, fnt, rot in lines:
-        # extruded depth: stacked dark copies
+    def comic_word(txt, fnt, pos, rot, top_col, bottom_col, dot_col, height):
+        """One big word: dark extrusion, cyan/magenta misprint, gradient face,
+        halftone dots, ink outline and a shine stripe."""
+        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         for k in range(22, 0, -1):
-            img.alpha_composite(text_layer(txt, fnt, (pos[0] + k, pos[1] + k), (40, 8, 60, 255), 14, (40, 8, 60, 255), rot))
-        # cyan / magenta misprint
-        img.alpha_composite(text_layer(txt, fnt, (pos[0] - 9, pos[1] - 4), (0, 230, 255, 255), 14, (0, 230, 255, 255), rot))
-        img.alpha_composite(text_layer(txt, fnt, (pos[0] + 9, pos[1] + 4), (255, 40, 150, 255), 14, (255, 40, 150, 255), rot))
-        # main face: red to yellow gradient with halftone
+            layer.alpha_composite(text_layer(txt, fnt, (pos[0] + k, pos[1] + k), (40, 8, 60, 255), 14, (40, 8, 60, 255), rot))
+        layer.alpha_composite(text_layer(txt, fnt, (pos[0] - 9, pos[1] - 4), (0, 230, 255, 255), 14, (0, 230, 255, 255), rot))
+        layer.alpha_composite(text_layer(txt, fnt, (pos[0] + 9, pos[1] + 4), (255, 40, 150, 255), 14, (255, 40, 150, 255), rot))
         face = text_layer(txt, fnt, pos, (255, 255, 255, 255), 0, None, rot)
         grad = Image.new("RGBA", (W, H))
         gd = ImageDraw.Draw(grad)
-        top = pos[1] - 150
+        top = pos[1] - height * 0.5
         for y in range(H):
-            t = max(0.0, min(1.0, (y - top) / 300))
-            c = (int(255), int(230 - 190 * t), int(60 - 30 * t), 255)
+            t = max(0.0, min(1.0, (y - top) / height))
+            c = tuple(int(top_col[i] + (bottom_col[i] - top_col[i]) * t) for i in range(3)) + (255,)
             gd.line([(0, y), (W, y)], fill=c)
-        dots = halftone((W, H), (255, 255, 180, 255), 16, 6, "down")
-        grad.alpha_composite(dots)
+        grad.alpha_composite(halftone((W, H), dot_col, 16, 6, "down"))
         face_col = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         face_col.paste(grad, (0, 0), face)
-        outline = text_layer(txt, fnt, pos, (0, 0, 0, 0), 14, INK, rot)
-        img.alpha_composite(outline)
-        img.alpha_composite(face_col)
-        # shine stripe
-        shine = text_layer(txt, fnt, (pos[0], pos[1]), (255, 255, 255, 255), 0, None, rot)
+        layer.alpha_composite(text_layer(txt, fnt, pos, (0, 0, 0, 0), 14, INK, rot))
+        layer.alpha_composite(face_col)
         mask = Image.new("L", (W, H), 0)
-        md = ImageDraw.Draw(mask)
-        md.polygon([(0, pos[1] - 120), (W, pos[1] - 170), (W, pos[1] - 150), (0, pos[1] - 100)], fill=170)
+        ImageDraw.Draw(mask).polygon([(0, pos[1] - height * 0.4), (W, pos[1] - height * 0.57), (W, pos[1] - height * 0.5), (0, pos[1] - height * 0.33)], fill=170)
         sh = Image.new("RGBA", (W, H), (255, 255, 255, 0))
-        sh.putalpha(ImageChops.multiply(mask, shine.split()[3]))
-        img.alpha_composite(sh)
-    # little spider emblem between the words
-    d = ImageDraw.Draw(img)
-    cx, cy, s = W // 2 + 470, 300, 70
-    for side in (-1, 1):
-        for k, (a, l) in enumerate([(-50, 1.0), (-15, 1.1), (20, 1.1), (55, 1.0)]):
-            ang = math.radians(a)
-            x1 = cx + side * s * 0.35
-            y1 = cy + s * 0.1 * (k - 1.5)
-            x2 = x1 + side * s * 0.7 * math.cos(ang) * l
-            y2 = y1 + s * 0.7 * math.sin(ang) * l - s * 0.3
-            x3 = x2 + side * s * 0.3
-            y3 = y2 + s * 0.6 * (1 if k > 1 else -1)
-            d.line([(cx, cy), (x1, y1), (x2, y2), (x3, y3)], fill=INK, width=12, joint="curve")
-    d.ellipse((cx - 22, cy - 40, cx + 22, cy + 10), fill=INK)
-    d.ellipse((cx - 30, cy - 5, cx + 30, cy + 70), fill=INK)
+        sh.putalpha(ImageChops.multiply(mask, face.split()[3]))
+        layer.alpha_composite(sh)
+        return layer
+
+    # SPIDEYS: hot red to yellow
+    spideys = comic_word("SPIDEYS", font(BANGERS, 290), (W // 2 - 40, 180), -4,
+                         (255, 235, 70), (255, 50, 40), (255, 255, 180, 255), 280)
+    img.alpha_composite(spideys)
+
+    # MULTIVERSE!: cyan to pink, sliced like a glitch between dimensions
+    multi = comic_word("MULTIVERSE!", font(BANGERS, 250), (W // 2 + 10, 640), -4,
+                       (0, 215, 255), (170, 40, 255), (140, 250, 255, 255), 240)
+    for (y0, y1, dx) in [(598, 606, 12), (676, 682, -10)]:
+        band = multi.crop((0, y0, W, y1))
+        multi.paste((0, 0, 0, 0), (0, y0, W, y1))
+        multi.paste(band, (dx, y0))
+    img.alpha_composite(multi)
+
+    # OF THE: a pink ribbon tucked between the two big words
+    rib = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    rd = ImageDraw.Draw(rib)
+    cx, cy, rw, rh = W // 2 - 10, 410, 250, 62
+    pts = [(cx - rw, cy - rh), (cx + rw, cy - rh), (cx + rw - 30, cy), (cx + rw, cy + rh), (cx - rw, cy + rh), (cx - rw + 30, cy)]
+    rd.polygon([(x + 10, y + 10) for x, y in pts], fill=(0, 220, 255, 255))
+    rd.polygon(pts, fill=(255, 40, 140, 255), outline=INK, width=10)
+    rd.text((cx, cy + 4), "OF THE", font=font(BANGERS, 110), fill=(255, 255, 255, 255), anchor="mm", stroke_width=8, stroke_fill=INK)
+    rib = rib.rotate(3, resample=Image.BICUBIC, center=(cx, cy))
+    img.alpha_composite(rib)
+
+    # the spider dangles from SPIDEYS on a web thread, next to the ribbon
+    sx, sy = W // 2 + 420, 440
+    dd = ImageDraw.Draw(img)
+    dd.line([(sx, 300), (sx, sy - 40)], fill=INK, width=12)
+    dd.line([(sx, 300), (sx, sy - 40)], fill=(255, 255, 255, 255), width=5)
+    spider_emblem(dd, sx, sy, 70)
     img = img.crop(img.getbbox())
     img.save(os.path.join(OUT, "logo.png"))
     print("logo", img.size)
+
+
+def splash():
+    """The loading picture shown while the web page downloads the game."""
+    W, H = 1280, 720
+    img = Image.new("RGB", (W, H), (40, 8, 60))
+    d = ImageDraw.Draw(img)
+    cx, cy = W // 2, H // 2 - 40
+    for k in range(36):
+        a0 = k * 2 * math.pi / 36
+        a1 = a0 + math.pi / 36
+        col = (230, 40, 120) if k % 2 == 0 else (200, 30, 110)
+        d.polygon([(cx, cy), (cx + math.cos(a0) * 1600, cy + math.sin(a0) * 1600), (cx + math.cos(a1) * 1600, cy + math.sin(a1) * 1600)], fill=col)
+    for y in range(0, H + 20, 18):
+        for x in range(0, W + 20, 18):
+            ox = 9 if (y // 18) % 2 else 0
+            r = ((x - cx) ** 2 + (y - cy) ** 2) ** 0.5 / 800 * 7
+            if r > 0.6:
+                d.ellipse((x + ox - r, y - r, x + ox + r, y + r), fill=(255, 210, 40))
+    d.rectangle((0, 0, W - 1, H - 1), outline=(13, 0, 20), width=18)
+    lg = Image.open(os.path.join(OUT, "logo.png")).convert("RGBA")
+    lg.thumbnail((820, 480))
+    img.paste(lg, (cx - lg.width // 2, 30), lg)
+    f = font(LUCKY, 40)
+    f2 = font(BANGERS, 54)
+    ty = 30 + lg.height + 40
+    d.text((cx + 4, ty + 4), "A GAME BY KAIAN", font=f, fill=(255, 40, 150), anchor="mm")
+    d.text((cx, ty), "A GAME BY KAIAN", font=f, fill=(255, 255, 255), anchor="mm", stroke_width=5, stroke_fill=(13, 0, 20))
+    d.text((cx + 5, ty + 70 + 5), "LOADING THE MULTIVERSE...", font=f2, fill=(0, 220, 255), anchor="mm")
+    d.text((cx, ty + 70), "LOADING THE MULTIVERSE...", font=f2, fill=(255, 230, 60), anchor="mm", stroke_width=6, stroke_fill=(13, 0, 20))
+    img.save(os.path.join(OUT, "splash.png"))
+    print("splash", img.size)
 
 
 # ------------------------------------------------------------------ icons
@@ -267,6 +326,7 @@ def graffiti(i, txt, cols):
 
 if __name__ == "__main__":
     logo()
+    splash()
     mask_icon("hp_full", (220, 30, 45, 255), (250, 250, 255, 255), INK, (20, 5, 15, 255))
     mask_icon("hp_empty", (70, 50, 90, 200), (120, 110, 140, 200), (40, 25, 55, 220), None)
     token()
