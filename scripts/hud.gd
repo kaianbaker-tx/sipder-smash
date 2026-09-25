@@ -497,7 +497,7 @@ func _draw_overlay() -> void:
 			_overlay.draw_polyline(tri, Color(0.05, 0, 0.08), 3.0)
 	# the open portal: a big cyan marker, or an arrow at the screen edge
 	if goal and is_instance_valid(goal):
-		var gp: Vector3 = goal.global_position + Vector3(0, 16.5, 0)
+		var gp: Vector3 = goal.global_position + Vector3(0, 20.5, 0)
 		var gdist := gp.distance_to(player.global_position)
 		var gbehind := cam.is_position_behind(gp)
 		var gs := cam.unproject_position(gp)
