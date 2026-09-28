@@ -54,6 +54,7 @@ export const PACKS = [
   { name: 'Bricks', give: [[B.BRICK, 16]], cost: 15, icon: B.BRICK },
   { name: 'Glass', give: [[B.GLASS, 16]], cost: 15, icon: B.GLASS },
   { name: 'Color Wool', give: [[B.WHITE, 8], [B.RED, 8], [B.ORANGE, 8], [B.YELLOW, 8], [B.GREEN, 8], [B.BLUE, 8], [B.PINK, 8]], cost: 30, icon: B.RED },
+  { name: 'Lamps', give: [[B.LAMP, 8]], cost: 20, icon: B.LAMP },
   { name: 'Gold Blocks', give: [[B.GOLD_BLOCK, 8]], cost: 60, icon: B.GOLD_BLOCK },
   { name: 'Money Blocks', give: [[B.MONEY_BLOCK, 8]], cost: 150, icon: B.MONEY_BLOCK },
 ];

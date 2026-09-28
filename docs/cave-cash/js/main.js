@@ -4,7 +4,7 @@ import { buildAtlas } from './atlas.js';
 import { B, BLOCKS, SOLID } from './blocks.js';
 import { BUSINESSES, PICKS, bizCost, bizIncome, money } from './data.js';
 import { World, W, D, SEA, GROUND, isProtected, R } from './world.js';
-import { buildTown, buildBusiness, SPAWN, MINE, SHOP, PLOTS, plotSignPos, chimneys } from './town.js';
+import { buildTown, buildCave, buildBusiness, SPAWN, MINE, SHOP, CAVE, PLOTS, plotSignPos, chimneys } from './town.js';
 import { Player, EYE } from './player.js';
 import { Game } from './game.js';
 import { UI } from './ui.js';
@@ -50,6 +50,7 @@ const blockMat = new THREE.MeshBasicMaterial({ map: atlasTex, vertexColors: true
 const world = new World(SEED);
 world.generate();
 buildTown(world, rng(SEED + 5));
+buildCave(world, rng(SEED + 9));
 world.finish();
 world.setUnlocked(1);
 scene.add(world.group);
@@ -69,6 +70,7 @@ const hand = new Hand();
 
 // Signs.
 new Sign(scene, (MINE.x0 + MINE.x1) / 2, GROUND + 7, MINE.z0 + 1, ['THE MINE', 'Ore grows back!'], { height: 1.8 });
+new Sign(scene, CAVE.x - 1, GROUND + 4.5, (CAVE.z0 + CAVE.z1 + 1) / 2, ['MONEY CAVE', 'Dig for Money Ore!'], { height: 1.6, bg: '#27c95a', stroke: '#27c95a', color: '#fff6d6', color2: '#fff6d6', border: '#1b0d2e' });
 new Sign(scene, SHOP.x0 + SHOP.w / 2, GROUND + 11, SHOP.z0 + SHOP.d / 2, ['SHOP', 'Press B'], { height: 2, bg: '#ffd21f', stroke: '#ffd21f' });
 const bizSigns = PLOTS.map((p) => new Sign(scene, 0, 0, 0, ['']));
 function updateBizSign(k) {
@@ -163,13 +165,13 @@ function startTouch() {
   setupTouch(input, lookBy, () => { buildTimer = 0.3; tryBuild(); });
 }
 
-// ---------- Screens ----------
-const saved = Game.loadData();
-if (saved) {
-  $('play-btn').textContent = 'CONTINUE';
-  $('new-btn').classList.remove('hidden');
-  applySettings(saved.settings);
-}
+// ---------- Screens and save files ----------
+let slot = 1;              // which save file we are playing
+let worldUsed = false;     // true after the first game, so switching files resets the world
+let confirmAction = null;
+
+applySettings(Game.loadSettings());
+renderSlots();
 $('loading').classList.add('hidden');
 
 function applySettings(s) {
@@ -186,62 +188,62 @@ function updateSettingButtons() {
 function toggleMusic() {
   sfx.setMusic(!sfx.isMusicOn());
   updateSettingButtons();
+  Game.saveSettings(settings());
   ui.toast('Music ' + (sfx.isMusicOn() ? 'on' : 'off'));
 }
 
-function startGame() {
-  sfx.startAudio();
-  player.pos.x = SPAWN.x; player.pos.y = SPAWN.y; player.pos.z = SPAWN.z;
-  player.yaw = 0; player.pitch = -0.05;
-  if (saved) {
-    const made = game.restore(saved);
-    if (saved.pos) {
-      [player.pos.x, player.pos.y, player.pos.z, player.yaw, player.pitch] = saved.pos;
-      player.unstick();
-    }
-    BUSINESSES.forEach((b, k) => updateBizSign(k));
-    if (made >= 1) setTimeout(() => ui.toast(`Welcome back! Your businesses made ${money(made)} while you were gone!`, 'good'), 600);
-  } else {
-    setTimeout(() => ui.toast('Mine the orange Copper Ore in THE MINE. It turns into money!'), 800);
-    setTimeout(() => ui.toast('Then press B to open the SHOP.'), 4200);
+// The 3 save files on the title screen.
+function renderSlots() {
+  let html = '';
+  for (let n = 1; n <= 3; n++) {
+    const d = Game.loadData(n);
+    const bizCount = d && Array.isArray(d.biz) ? d.biz.filter((l) => l > 0).length : 0;
+    const ores = d ? d.ores || 1 : 0;
+    const info = d ? `${money(d.money || 0)} &middot; ${ores} material${ores === 1 ? '' : 's'} &middot; ${bizCount} business${bizCount === 1 ? '' : 'es'}` : 'Empty &middot; start a new world';
+    html += `<div class="save-card"><button class="btn save-play${d ? ' green' : ''}" data-slot="${n}">
+      <span class="save-name">SAVE ${n}</span><span class="save-info">${info}</span></button>
+      ${d ? `<button class="btn red small save-del" data-slot="${n}" aria-label="Delete save ${n}">X</button>` : ''}</div>`;
   }
-  hand.setColor(PICKS[game.s.pick].color);
-  $('title').classList.add('hidden');
-  $('hud').classList.remove('hidden');
-  state = 'play';
-  if (touchMode) startTouch();
-  lock();
+  $('slots').innerHTML = html;
+}
+$('slots').addEventListener('click', (e) => {
+  const del = e.target.closest('.save-del'), play = e.target.closest('.save-play');
+  sfx.startAudio();
+  sfx.click();
+  if (del) {
+    const n = +del.dataset.slot;
+    askConfirm(`DELETE SAVE ${n}?`, 'That save file will be gone forever.', () => { Game.wipe(n); renderSlots(); });
+  } else if (play) startGame(+play.dataset.slot);
+});
+
+function askConfirm(title, text, action) {
+  $('confirm-title').textContent = title;
+  $('confirm-text').textContent = text;
+  confirmAction = action;
+  $('confirm').classList.remove('hidden');
 }
 
-$('play-btn').onclick = () => { sfx.click(); startGame(); };
-$('new-btn').onclick = () => { sfx.click(); sfx.startAudio(); $('confirm').classList.remove('hidden'); };
-$('resume-btn').onclick = () => { sfx.click(); resume(); };
-$('pause-btn').onclick = () => { sfx.click(); ui.shopOpen ? closeShop(true) : pause(); };
-$('shop-btn').onclick = () => { sfx.click(); ui.shopOpen ? closeShop() : openShop(); };
-$('music-btn').onclick = () => { toggleMusic(); save(); };
-$('jump-btn').onclick = () => { player.autoJump = !player.autoJump; updateSettingButtons(); sfx.click(); save(); };
-$('reset-btn').onclick = () => { sfx.click(); $('confirm').classList.remove('hidden'); };
-$('confirm-no').onclick = () => { sfx.click(); $('confirm').classList.add('hidden'); };
-$('confirm-yes').onclick = () => {
-  sfx.click();
-  Game.wipe();
-  newWorld();
-};
-
-// Start over without reloading the page.
-function newWorld() {
+// Put the world back the way it was made, with nothing bought.
+function resetWorld() {
   game.s = Game.fresh();
   game.regrow = [];
   world.resetToBase();
   world.setUnlocked(1);
   PLOTS.forEach((p) => buildBusiness(world, p, 0));
-  BUSINESSES.forEach((b, k) => updateBizSign(k));
+  ui.sel = 0;
+  ui.lastIncome = -1;
+  ui.changed();
+}
+
+function spawnPlayer() {
   player.pos.x = SPAWN.x; player.pos.y = SPAWN.y; player.pos.z = SPAWN.z;
   player.vel.x = player.vel.y = player.vel.z = 0;
   player.yaw = 0; player.pitch = -0.05;
-  hand.setColor(PICKS[0].color);
-  ui.sel = 0;
-  ui.changed();
+}
+
+function showGame() {
+  BUSINESSES.forEach((b, k) => updateBizSign(k));
+  hand.setColor(PICKS[game.s.pick].color);
   $('confirm').classList.add('hidden');
   $('title').classList.add('hidden');
   $('pause').classList.add('hidden');
@@ -249,9 +251,77 @@ function newWorld() {
   state = 'play';
   if (touchMode) startTouch();
   lock();
-  ui.toast('A brand new world! Mine Copper Ore in THE MINE.', 'good');
+}
+
+function startGame(n) {
+  sfx.startAudio();
+  slot = n;
+  if (worldUsed) resetWorld();
+  worldUsed = true;
+  spawnPlayer();
+  const data = Game.loadData(n);
+  if (data) {
+    const made = game.restore(data);
+    if (data.pos) {
+      [player.pos.x, player.pos.y, player.pos.z, player.yaw, player.pitch] = data.pos;
+      player.unstick();
+    }
+    ui.toast(`Playing SAVE ${n}`, 'good');
+    if (made >= 1) setTimeout(() => ui.toast(`Welcome back! Your businesses made ${money(made)} while you were gone!`, 'good'), 600);
+  } else {
+    setTimeout(() => ui.toast('Mine the orange Copper Ore in THE MINE. It turns into money!'), 800);
+    setTimeout(() => ui.toast('Then press B to open the SHOP.'), 4200);
+    setTimeout(() => ui.toast('Brave? Go down the MONEY CAVE to find Money Ore!'), 8000);
+  }
+  showGame();
   save();
 }
+
+// Back to the title screen to pick another save file.
+function toTitle() {
+  save();
+  state = 'title';
+  input.mine = input.build = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+  $('pause').classList.add('hidden');
+  $('hud').classList.add('hidden');
+  renderSlots();
+  $('title').classList.remove('hidden');
+}
+
+$('resume-btn').onclick = () => { sfx.click(); resume(); };
+$('pause-btn').onclick = () => { sfx.click(); ui.shopOpen ? closeShop(true) : pause(); };
+$('shop-btn').onclick = () => { sfx.click(); ui.shopOpen ? closeShop() : openShop(); };
+$('music-btn').onclick = () => toggleMusic();
+$('jump-btn').onclick = () => { player.autoJump = !player.autoJump; updateSettingButtons(); Game.saveSettings(settings()); sfx.click(); };
+$('save-btn').onclick = () => {
+  const ok = save();
+  sfx.coin();
+  const b = $('save-btn');
+  b.textContent = ok ? `SAVED TO SAVE ${slot}!` : 'COULD NOT SAVE';
+  clearTimeout(b.timer);
+  b.timer = setTimeout(() => (b.textContent = 'SAVE GAME'), 1800);
+};
+$('files-btn').onclick = () => { sfx.click(); toTitle(); };
+$('reset-btn').onclick = () => {
+  sfx.click();
+  askConfirm('START OVER?', `Your money, businesses and buildings in SAVE ${slot} will be gone.`, () => {
+    Game.wipe(slot);
+    resetWorld();
+    spawnPlayer();
+    showGame();
+    ui.toast('A brand new world! Mine Copper Ore in THE MINE.', 'good');
+    save();
+  });
+};
+$('confirm-no').onclick = () => { sfx.click(); $('confirm').classList.add('hidden'); };
+$('confirm-yes').onclick = () => {
+  sfx.click();
+  $('confirm').classList.add('hidden');
+  const a = confirmAction;
+  confirmAction = null;
+  if (a) a();
+};
 
 function pause() {
   if (state !== 'play') return;
@@ -341,7 +411,7 @@ function updateMining(dt) {
 }
 
 // ---------- Saving ----------
-function save() { if (state !== 'title') game.save(player, settings()); }
+function save() { return state !== 'title' && worldUsed ? game.save(player, slot) : false; }
 setInterval(save, 5000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); if (state === 'play' && touchMode) pause(); } });
 window.addEventListener('pagehide', save);

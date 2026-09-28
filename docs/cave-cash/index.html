@@ -40,16 +40,14 @@
   <div class="panel title-panel">
     <h1 class="logo"><span class="l1">CAVE</span> <span class="l2">CA$H</span></h1>
     <p class="tag">Mine money. Buy stuff. Get RICH!</p>
-    <div id="title-buttons">
-      <button id="play-btn" class="btn big green">PLAY</button>
-      <button id="new-btn" class="btn red hidden">NEW WORLD</button>
-    </div>
+    <div class="pick-save">Pick a save file</div>
+    <div id="slots"></div>
     <div class="how">
       <div><b>WASD</b> walk &nbsp; <b>SPACE</b> jump &nbsp; <b>SHIFT</b> run</div>
       <div><b>HOLD LEFT CLICK</b> mine &nbsp; <b>RIGHT CLICK</b> build</div>
       <div><b>B</b> shop &nbsp; <b>1-9</b> or <b>wheel</b> pick a block &nbsp; <b>M</b> music</div>
     </div>
-    <p class="tip">Money Ore is where diamonds would be. Dig DEEP in the caves to find it!</p>
+    <p class="tip">Money Ore is where diamonds would be. Dig DEEP in the caves to find it! Your game saves by itself.</p>
     <p id="loading" class="tip">Digging the caves...</p>
   </div>
 </div>
@@ -58,6 +56,10 @@
   <div class="panel">
     <h2>PAUSED</h2>
     <button id="resume-btn" class="btn big green">KEEP PLAYING</button>
+    <div class="row">
+      <button id="save-btn" class="btn gold">SAVE GAME</button>
+      <button id="files-btn" class="btn">SAVE FILES</button>
+    </div>
     <div class="row">
       <button id="music-btn" class="btn">MUSIC: ON</button>
       <button id="jump-btn" class="btn">AUTO-JUMP: ON</button>
@@ -75,10 +77,10 @@
 
 <div id="confirm" class="screen hidden">
   <div class="panel">
-    <h2>START OVER?</h2>
-    <p>Your money, businesses and buildings will be gone.</p>
+    <h2 id="confirm-title">START OVER?</h2>
+    <p id="confirm-text">Your money, businesses and buildings will be gone.</p>
     <div class="row">
-      <button id="confirm-yes" class="btn red">YES, NEW WORLD</button>
+      <button id="confirm-yes" class="btn red">YES</button>
       <button id="confirm-no" class="btn green">NO WAY</button>
     </div>
   </div>

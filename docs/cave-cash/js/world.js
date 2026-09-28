@@ -1,6 +1,6 @@
 // The block world: making the land, changing blocks, and building the 3D shapes.
 import * as THREE from '../lib/three.min.js';
-import { B, BLOCKS, SOLID, OPAQUE, SHADOW } from './blocks.js';
+import { B, BLOCKS, SOLID, OPAQUE, SHADOW, GLOW } from './blocks.js';
 import { ORES, MONEY_ORE } from './data.js';
 import { tileUV } from './atlas.js';
 import { rng, noise3, fbm2, smoothstep, lerp } from './noise.js';
@@ -10,6 +10,7 @@ export const SEA = 20;
 export const GROUND = 25;               // top block of the town, you stand at y = 26
 export const TOWN = { x: 64, z: 58 };
 const CS = 16;                          // section size
+const LAMP_R = 6;                       // how far a lamp shines
 const SX = W / CS, SY = H / CS, SZ = D / CS;
 
 // Regions: what part of town a block belongs to.
@@ -45,6 +46,7 @@ export class World {
     this.seed = seed;
     this.data = new Uint8Array(W * H * D);
     this.region = new Uint8Array(W * H * D);
+    this.glow = new Uint8Array(W * H * D);     // light from lamps, 0..255
     this.top = new Int16Array(W * D).fill(-1);
     this.visual = new Uint8Array(256);  // what each block looks like (locked ores look like stone)
     for (let i = 0; i < 256; i++) this.visual[i] = i;
@@ -74,8 +76,10 @@ export class World {
   set(x, y, z, id, record = true) {
     if (!this.inside(x, y, z)) return;
     const i = this.idx(x, y, z);
-    if (this.data[i] === id) return;
+    const old = this.data[i];
+    if (old === id) return;
     this.data[i] = id;
+    if (old === B.LAMP || id === B.LAMP) this.relight(x, y, z);
     if (record && this.base) {
       if (this.base[i] === id) this.edits.delete(i);
       else this.edits.set(i, id);
@@ -111,6 +115,35 @@ export class World {
 
   markAll() {
     for (let i = 0; i < this.meshes.length; i++) this.dirty.add(i);
+  }
+
+  // ---------- Lamps ----------
+  addGlow(lx, ly, lz, x0 = -1e9, y0 = -1e9, z0 = -1e9, x1 = 1e9, y1 = 1e9, z1 = 1e9) {
+    const R = LAMP_R;
+    for (let y = Math.max(ly - R, y0, 0); y <= Math.min(ly + R, y1, H - 1); y++)
+      for (let z = Math.max(lz - R, z0, 0); z <= Math.min(lz + R, z1, D - 1); z++)
+        for (let x = Math.max(lx - R, x0, 0); x <= Math.min(lx + R, x1, W - 1); x++) {
+          const d = Math.sqrt((x - lx) ** 2 + (y - ly) ** 2 + (z - lz) ** 2);
+          if (d > R) continue;
+          const v = Math.round(255 * (1 - d / (R + 1)));
+          const i = x + W * (z + D * y);
+          if (v > this.glow[i]) this.glow[i] = v;
+        }
+  }
+
+  // A lamp was added or removed: redo the light around it.
+  relight(cx, cy, cz) {
+    const R = LAMP_R;
+    const x0 = cx - R, y0 = cy - R, z0 = cz - R, x1 = cx + R, y1 = cy + R, z1 = cz + R;
+    for (let y = Math.max(0, y0); y <= Math.min(H - 1, y1); y++)
+      for (let z = Math.max(0, z0); z <= Math.min(D - 1, z1); z++)
+        for (let x = Math.max(0, x0); x <= Math.min(W - 1, x1); x++) this.glow[x + W * (z + D * y)] = 0;
+    for (let y = Math.max(0, cy - 2 * R); y <= Math.min(H - 1, cy + 2 * R); y++)
+      for (let z = Math.max(0, cz - 2 * R); z <= Math.min(D - 1, cz + 2 * R); z++)
+        for (let x = Math.max(0, cx - 2 * R); x <= Math.min(W - 1, cx + 2 * R); x++)
+          if (this.data[x + W * (z + D * y)] === B.LAMP) this.addGlow(x, y, z, x0, y0, z0, x1, y1, z1);
+    for (let y = y0; y <= y1 + CS; y += CS) for (let z = z0; z <= z1 + CS; z += CS) for (let x = x0; x <= x1 + CS; x += CS)
+      this.markSection(Math.min(x, x1), Math.min(y, y1), Math.min(z, z1));
   }
 
   // Locked ores look like stone. Call this when you buy a new material.
@@ -202,6 +235,7 @@ export class World {
   // After the land and town are made: remember it so we only save changes.
   finish() {
     this.base = this.data.slice();
+    this.lightAll();
     for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) this.fixTop(x, z);
     this.markAll();
   }
@@ -211,7 +245,16 @@ export class World {
     this.data.set(this.base);
     this.edits.clear();
     for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) this.fixTop(x, z);
+    this.lightAll();
     this.markAll();
+  }
+
+  lightAll() {
+    this.glow.fill(0);
+    for (let i = 0; i < this.data.length; i++) {
+      if (this.data[i] !== B.LAMP) continue;
+      this.addGlow(i % W, (i / (W * D)) | 0, ((i / W) | 0) % D);
+    }
   }
 
   applyEdits(list) {
@@ -223,6 +266,7 @@ export class World {
       else this.edits.set(i, id);
     }
     for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) this.fixTop(x, z);
+    this.lightAll();
     this.markAll();
   }
 
@@ -247,7 +291,7 @@ export class World {
     const sx = s % SX, sz = ((s / SX) | 0) % SZ, sy = (s / (SX * SZ)) | 0;
     const x0 = sx * CS, y0 = sy * CS, z0 = sz * CS;
     const pos = [], col = [], uv = [], ind = [];
-    const data = this.data, vis = this.visual, top = this.top;
+    const data = this.data, vis = this.visual, top = this.top, glow = this.glow;
     const g = (x, y, z) => this.get(x, y, z);
     const occ = (x, y, z) => (OPAQUE[g(x, y, z)] || g(x, y, z) === B.LEAVES ? 1 : 0);
     let vc = 0;
@@ -263,7 +307,11 @@ export class World {
         if (nid === id && id === B.GLASS) continue;
         // Covered from the sky? Then it is in shadow.
         let light = 1;
-        if (nx >= 0 && nz >= 0 && nx < W && nz < D && ny < top[nx + W * nz]) light = 0.55;
+        if (nx >= 0 && nz >= 0 && nx < W && nz < D && ny < top[nx + W * nz]) {
+          light = 0.55;
+          if (ny < H) light = Math.min(1, light + glow[nx + W * (nz + D * ny)] / 400);
+        }
+        if (GLOW[id]) light = 1.25;
         const uvb = tileUV(bd.tiles[F.t]);
         const ao = F.tmp;
         for (let k = 0; k < 4; k++) {
@@ -273,7 +321,7 @@ export class World {
           const s3 = occ(nx + o[6], ny + o[7], nz + o[8]);
           ao[k] = s1 && s2 ? 0 : 3 - (s1 + s2 + s3);
           pos.push(x + c[0], y + c[1], z + c[2]);
-          const br = F.s * AO[ao[k]] * light;
+          const br = light > 1 ? 1 : F.s * AO[ao[k]] * light;
           col.push(br, br, br);
           uv.push(uvb[UVC[k][0]], uvb[UVC[k][1]]);
         }

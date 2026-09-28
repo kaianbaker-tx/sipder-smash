@@ -70,9 +70,10 @@ export class UI {
       if (this.shopOpen) this.refreshPrices();
     }
     const inc = g.income();
-    if (inc !== this.lastIncome) {
+    const key = inc + ':' + s.pick + ':' + s.x2;
+    if (key !== this.lastIncome) {
       $('income').textContent = inc > 0 ? `+${money(inc)} every second` : '';
-      this.lastIncome = inc;
+      this.lastIncome = key;
       $('badges').innerHTML = `<div class="badge">${PICKS[s.pick].name}</div>` + (s.x2 ? '<div class="badge x2">2X MONEY</div>' : '');
     }
     this.renderHotbar();

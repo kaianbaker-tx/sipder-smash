@@ -150,6 +150,14 @@ export function buildAtlas() {
     blue() { wool([52, 92, 206]); },
     orange() { wool([242, 132, 40]); },
     pink() { wool([246, 142, 190]); },
+    lamp() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const edge = x === 0 || y === 0 || x === 15 || y === 15;
+        const bar = x === 5 || x === 10 || y === 5 || y === 10;
+        const d = Math.hypot(x - 7.5, y - 7.5);
+        px(x, y, edge ? [120, 84, 40] : bar ? [150, 106, 52] : mix([255, 250, 200], [255, 190, 60], Math.min(1, d / 7)));
+      }
+    },
     metal() {
       fill([122, 132, 148], 6);
       for (let i = 0; i < TS; i++) { px(i, 0, [92, 100, 114]); px(0, i, [92, 100, 114]); px(i, 8, [104, 112, 126]); }

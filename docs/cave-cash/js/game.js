@@ -5,7 +5,9 @@ import { mineRoll, buildBusiness, PLOTS } from './town.js';
 import { rng } from './noise.js';
 import * as sfx from './sound.js';
 
-const SAVE_KEY = 'cave-cash-save-v1';
+const OLD_KEY = 'cave-cash-save-v1';
+const SETTINGS_KEY = 'cave-cash-settings';
+const slotKey = (n) => 'cave-cash-save-' + n;
 const REGROW = [25, 45];   // seconds before a mine block grows back
 
 export class Game {
@@ -21,7 +23,7 @@ export class Game {
   }
 
   static fresh() {
-    return { money: 0, earned: 0, ores: 1, pick: 0, biz: [0, 0, 0], x2: false, inv: {}, milestone: 0 };
+    return { money: 0, earned: 0, ores: 1, pick: 0, biz: [0, 0, 0], x2: false, inv: {}, milestone: 0, played: 0 };
   }
 
   get mult() { return this.s.x2 ? 2 : 1; }
@@ -148,6 +150,7 @@ export class Game {
   // ---------- Every frame ----------
   tick(dt, player) {
     this.time += dt;
+    this.s.played += dt;
     // Businesses make money.
     const inc = this.income();
     if (inc > 0) {
@@ -178,27 +181,43 @@ export class Game {
   }
 
   // ---------- Saving ----------
-  save(player, settings) {
+  // There are 3 save files. Each one keeps its own world.
+  save(player, slot) {
     const p = player.pos;
     const data = {
       ...this.s,
       pos: [p.x, p.y, p.z, player.yaw, player.pitch],
       edits: this.world.editList(),
       savedAt: Date.now(),
-      settings,
     };
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { /* storage full or blocked */ }
+    try {
+      localStorage.setItem(slotKey(slot), JSON.stringify(data));
+      return true;
+    } catch (e) { return false; }
   }
 
-  static loadData() {
+  static loadData(slot) {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      // Games saved before there were save files go into SAVE 1.
+      if (slot === 1 && !localStorage.getItem(slotKey(1)) && localStorage.getItem(OLD_KEY)) {
+        localStorage.setItem(slotKey(1), localStorage.getItem(OLD_KEY));
+        localStorage.removeItem(OLD_KEY);
+      }
+      const raw = localStorage.getItem(slotKey(slot));
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   }
 
-  static wipe() {
-    try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+  static wipe(slot) {
+    try { localStorage.removeItem(slotKey(slot)); } catch (e) { /* ignore */ }
+  }
+
+  static loadSettings() {
+    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch (e) { return null; }
+  }
+
+  static saveSettings(s) {
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
   }
 
   // Put a saved game back. Returns money made while you were away.
@@ -212,7 +231,7 @@ export class Game {
     this.world.setUnlocked(this.s.ores);
     this.s.biz.forEach((lv, k) => lv && buildBusiness(this.world, PLOTS[k], lv));
     // Mine blocks that were dug out grow back soon.
-    for (const c of this.world.mineCells) if (this.world.data[c] === 0) this.regrow.push({ i: c, at: 3 + this.r() * 25 });
+    for (const c of this.world.mineCells) if (this.world.data[c] === 0) this.regrow.push({ i: c, at: this.time + 3 + this.r() * 25 });
     const away = Math.min(2 * 3600, Math.max(0, (Date.now() - (data.savedAt || Date.now())) / 1000));
     const made = this.income() * away;
     if (made >= 1) { this.s.money += made; this.s.earned += made; }

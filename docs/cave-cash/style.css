@@ -96,7 +96,13 @@ html, body {
 .logo .l1 { color: #b9a4ff; text-shadow: 0 6px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink); }
 .logo .l2 { color: var(--green); text-shadow: 0 6px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 0 30px rgba(39, 201, 90, 0.7); }
 .tag { font-family: inherit !important; color: var(--gold); font-size: 24px; margin: 10px 0 20px; font-weight: normal !important; text-shadow: 0 3px 0 var(--ink); }
-#title-buttons { display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.pick-save { color: var(--cream); font-size: 20px; margin-bottom: 10px; }
+#slots { display: grid; gap: 10px; }
+.save-card { display: flex; gap: 8px; align-items: stretch; }
+.save-play { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; padding: 12px 18px 8px; }
+.save-name { font-size: 26px; white-space: nowrap; }
+.save-info { font-family: system-ui, sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0; text-shadow: none; text-align: right; }
+.save-del { flex: none; }
 .how {
   margin-top: 22px;
   font-family: system-ui, sans-serif;
@@ -286,6 +292,9 @@ body.touch #crosshair { opacity: 0.8; }
   .btn.big { font-size: 26px; }
   .panel { padding: 16px; }
   .panel h2 { font-size: 32px; }
+  .save-name { font-size: 20px; }
+  .save-play { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .save-info { text-align: left; font-size: 12px; }
   .card .btn { min-width: 100px; font-size: 16px; }
   .card .name { font-size: 18px; }
   .card img, .card .ico { width: 42px; height: 42px; }

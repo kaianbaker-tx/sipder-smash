@@ -26,3 +26,15 @@ what he meant. Short sentences, one idea at a time.
   `tools/gen_ui.py` and `tools/gen_audio.py`. Edit those, then re-run them.
 - `tools/check.sh` checks every script. `tools/autoplay.gd` plays the game
   by itself for testing: `godot res://scenes/main.tscn -- --autoplay=auto --chapter=2`.
+
+## Cave Cash (second game)
+
+- A blocky mining game in `docs/cave-cash/`. Ore turns into money.
+  Money Ore replaces diamonds. Every upgrade costs double.
+- Plain web files with three.js, not Godot. No build step: edit and push.
+  Once merged to main it is live at `/cave-cash/` on the Pages site.
+- Prices are in `js/data.js`. The Mine, Shop, Money Cave and the 3
+  businesses are built in `js/town.js`. The land is made in `js/world.js`.
+- Test: run `python3 -m http.server` in `docs/`, open `/cave-cash/`.
+  `window.cave` gives the game to test scripts.
+- Games save in the browser: 3 save files, picked on the title screen.

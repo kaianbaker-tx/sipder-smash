@@ -10,6 +10,9 @@ export const MINE = { x0: 52, x1: 76, z0: 30, z1: 50, ring: 2, bottom: 8 };
 
 export const SHOP = { x0: 80, z0: 56, w: 9, d: 9 };
 
+// The Money Cave: stairs go down from town to a big cave full of ore.
+export const CAVE = { x: 47, z0: 57, z1: 59, room: { x: 27, y: 9, z: 58, rx: 9, ry: 4.5, rz: 9 } };
+
 // Business plots. The front (door) faces north, toward spawn.
 export const PLOTS = [
   { key: 'lemon', region: R.LEMON, x0: 43, z0: 70, w: 9, d: 9, wall: B.YELLOW, trim: B.WHITE, ring: B.YELLOW },
@@ -79,6 +82,7 @@ export function buildTown(world, r) {
   const path = (x0, z0, x1, z1, id = B.PATH) => box(world, x0, GROUND, z0, x1, GROUND, z1, id);
   path(61, 59, 67, 65, B.COBBLE);
   path(63, 52, 65, 58);
+  path(49, 58, 60, 59);
   path(68, 59, 79, 60);
   path(46, 66, 83, 67);
   path(46, 68, 48, 69);
@@ -110,6 +114,62 @@ export function buildTown(world, r) {
     box(world, p.x0, GROUND, p.z0, p.x0 + p.w - 1, H - 1, p.z0 + p.d - 1, 0, p.region);
     buildBusiness(world, p, 0, false);
   }
+}
+
+export function buildCave(world, r) {
+  const c = CAVE, room = c.room;
+  const air = (x, y, z) => { if (world.inside(x, y, z) && world.data[world.idx(x, y, z)] !== B.BEDROCK) world.data[world.idx(x, y, z)] = 0; };
+  const put = (x, y, z, id) => { if (world.inside(x, y, z)) world.data[world.idx(x, y, z)] = id; };
+  // Big room.
+  for (let y = room.y - 6; y <= room.y + 6; y++) for (let z = room.z - room.rz - 2; z <= room.z + room.rz + 2; z++) for (let x = room.x - room.rx - 2; x <= room.x + room.rx + 2; x++) {
+    const n = (r() - 0.5) * 0.25;
+    const d = ((x - room.x) / room.rx) ** 2 + ((y - room.y) / room.ry) ** 2 + ((z - room.z) / room.rz) ** 2;
+    if (d < 1 + n && y > 1) air(x, y, z);
+  }
+  // Ore everywhere on the walls. Locked ones look like stone until you buy them.
+  for (let y = room.y - 7; y <= room.y + 7; y++) for (let z = room.z - room.rz - 3; z <= room.z + room.rz + 3; z++) for (let x = room.x - room.rx - 3; x <= room.x + room.rx + 3; x++) {
+    if (!world.inside(x, y, z) || world.data[world.idx(x, y, z)] !== B.STONE) continue;
+    const k = r();
+    if (k < 0.035) put(x, y, z, B.MONEY_ORE);
+    else if (k < 0.3) put(x, y, z, ORES[Math.min(9, Math.floor(r() * r() * 10))].id);
+  }
+  // Stairs down from town, all the way to the cave floor (so you can always walk back up).
+  const isAir = (x, y, z) => world.inside(x, y, z) && world.data[world.idx(x, y, z)] === 0;
+  for (let k = 0; k < 40; k++) {
+    const x = c.x - k, floor = GROUND - k;
+    const zm = c.z0 + 1;
+    // Is this step inside the big room? Then find the room's floor.
+    let roomFloor = -1;
+    if (k > 4 && isAir(x, floor + 4, zm)) {
+      let y = floor + 4;
+      while (y > 1 && isAir(x, y - 1, zm)) y--;
+      roomFloor = y - 1;
+    }
+    for (let z = c.z0; z <= c.z1; z++) {
+      put(x, floor, z, k < 4 ? B.COBBLE : B.STONE);
+      for (let y = floor - 1; y > roomFloor && roomFloor >= 0; y--) put(x, y, z, B.STONE);
+      for (let y = floor + 1; y <= floor + 3; y++) air(x, y, z);
+    }
+    if (k % 4 === 2) for (const z of [c.z0 - 1, c.z1 + 1]) if (!isAir(x, floor + 2, z)) put(x, floor + 2, z, B.LAMP);
+    if (roomFloor >= 0 && floor <= roomFloor + 1) break;
+  }
+  // Border around the hole in town.
+  for (let x = c.x - 3; x <= c.x + 1; x++) for (const z of [c.z0 - 1, c.z1 + 1]) put(x, GROUND, z, B.COBBLE);
+  for (let z = c.z0 - 1; z <= c.z1 + 1; z++) put(c.x + 1, GROUND, z, B.COBBLE);
+  // Lamps in the room.
+  for (let a = 0; a < 10; a++) {
+    const ang = (a / 10) * Math.PI * 2;
+    let x = Math.round(room.x + Math.cos(ang) * room.rx), z = Math.round(room.z + Math.sin(ang) * room.rz), y = room.y;
+    // Walk inward until we find the wall.
+    for (let t = 0; t < 12 && world.inside(x, y, z) && world.data[world.idx(x, y, z)] !== 0; t++) {
+      x -= Math.sign(x - room.x); z -= Math.sign(z - room.z);
+    }
+    x += Math.sign(x - room.x); z += Math.sign(z - room.z);
+    put(x, y, z, B.LAMP);
+  }
+  // A lucky pile of Money Ore in the middle.
+  const fy = (() => { let y = room.y; while (y > 1 && world.data[world.idx(room.x, y - 1, room.z)] === 0) y--; return y; })();
+  for (const [dx, dz, dy] of [[0, 0, 0], [1, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0, 0, 1]]) put(room.x + dx, fy + dy, room.z + dz, B.MONEY_ORE);
 }
 
 // Build (or rebuild) a business at its level. Level 0 = empty plot for sale.
