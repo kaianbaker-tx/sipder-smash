@@ -268,8 +268,12 @@ func _prop(name: String, pos: Vector3, collide := false) -> void:
 		add_colliders(_stack(mesh), xf)
 
 
+func _near_start(pos: Vector3, r := 12.0) -> bool:
+	return Vector2(pos.x - start_pos.x, pos.z - start_pos.z).length() < r and absf(pos.y - start_pos.y) < 8.0
+
+
 func _random_prop(pos: Vector3, collide := false) -> void:
-	if Vector2(pos.x - start_pos.x, pos.z - start_pos.z).length() < 12.0 and absf(pos.y - start_pos.y) < 8.0:
+	if _near_start(pos):
 		return
 	var props: Array = theme.get("props", [])
 	if not props.is_empty():
@@ -514,13 +518,18 @@ func _islands() -> void:
 			_random_prop(c + Vector3(cos(a2), 0, sin(a2)) * rng.randf_range(r * 0.55, r * 0.9))
 		for p in (1 if r < 18.0 else 2):
 			var a3 := rng.randf() * TAU
-			add_pole(c + Vector3(cos(a3), 0, sin(a3)) * (r * 0.7), rng.randf_range(24.0, 36.0), 0.9, pole_tex)
+			var pp := c + Vector3(cos(a3), 0, sin(a3)) * (r * 0.7)
+			if _near_start(pp, 10.0):
+				pp = c - Vector3(cos(a3), 0, sin(a3)) * (r * 0.7)
+			add_pole(pp, rng.randf_range(24.0, 36.0), 0.9, pole_tex)
 		bot_spots.append(c + Vector3(rng.randf_range(-6, 6), rng.randf_range(10, 18), rng.randf_range(-6, 6)))
 	# stepping stones between the islands
 	for k in 14:
 		var a4 := rng.randf() * TAU
 		var r4 := rng.randf_range(42.0, 130.0)
 		var gp := Vector3(cos(a4) * r4, rng.randf_range(0.0, 36.0), sin(a4) * r4)
+		if _near_start(gp, 16.0):
+			continue
 		add_disc(rng.randf_range(4.0, 6.5), 4.0, gp, _ground2(), null)
 		safe_spots.append(gp + Vector3(0, 0.2, 0))
 		if k % 2 == 0:
@@ -617,7 +626,8 @@ func _rings() -> void:
 	var circles: Array = []
 	var centre_top := 60.0
 	if not giants.is_empty():
-		var g := _giant(giants[0], Vector3.ZERO, rng.randf_range(62.0, 80.0))
+		var cs: Array = theme.get("centre_size", [62.0, 80.0])
+		var g := _giant(giants[0], Vector3.ZERO, rng.randf_range(cs[0], cs[1]))
 		circles.append([Vector3.ZERO, g.radius])
 		centre_top = g.top
 	elif kit != "none":
@@ -934,6 +944,8 @@ func _cake() -> void:
 	for k in 18:
 		var a := rng.randf() * TAU
 		var p := Vector3(cos(a), 0, sin(a)) * rng.randf_range(60.0, 168.0)
+		if _near_start(p, 18.0):
+			continue
 		var s := rng.randf_range(5.0, 11.0)
 		var col: Color = BRIGHT[rng.randi() % BRIGHT.size()]
 		_box(Vector3(s, s, s), p + Vector3(0, s * 0.5, 0), _pattern("stripes", col, Color.WHITE), Basis(Vector3.UP, rng.randf() * TAU))
@@ -996,7 +1008,7 @@ func _dominoes() -> void:
 		_box(Vector3(13.0, h, 3.0), p + b * Vector3(0, h * 0.5, 0), pips, b)
 		if k % 5 == 0:
 			bot_spots.append(p + Vector3(0, h + rng.randf_range(6, 12), 0))
-		t += 9.0 / r
+		t += 10.5 / r
 		r = 30.0 + t * 24.0 / TAU
 		k += 1
 	for n in 6:
