@@ -2,6 +2,7 @@ extends CanvasLayer
 ## Title screen: logo, PLAY, suit picker and how-to-play.
 
 signal play_pressed
+signal continue_pressed
 signal suit_preview(suit: String)
 
 const LOGO := preload("res://assets/ui/logo.png")
@@ -15,6 +16,7 @@ var _wear: Button
 var _suit_keys: Array = []
 var _suit_i := 0
 var _play: Button
+var _continue: Button
 
 
 func _ready() -> void:
@@ -50,10 +52,18 @@ func _ready() -> void:
 	_main_box.position = Vector2(70, 452)
 	_main_box.add_theme_constant_override("separation", 16)
 	root.add_child(_main_box)
+	var top_row := HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 16)
+	_main_box.add_child(top_row)
 	_play = UiKit.button("PLAY!", 64)
 	_play.custom_minimum_size = Vector2(300, 0)
 	_play.pressed.connect(func() -> void: play_pressed.emit())
-	_main_box.add_child(_play)
+	top_row.add_child(_play)
+	# CONTINUE: jump back to the furthest dimension reached last time
+	_continue = UiKit.button("CONTINUE", 30, Color(0.4, 1.0, 0.5))
+	_continue.pressed.connect(func() -> void: continue_pressed.emit())
+	top_row.add_child(_continue)
+	refresh()
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	_main_box.add_child(row)
@@ -81,6 +91,14 @@ func _ready() -> void:
 	_build_suits(root)
 	_build_help(root)
 	_play.grab_focus.call_deferred()
+
+
+## Show CONTINUE only when there is somewhere to continue to.
+func refresh() -> void:
+	if not _continue:
+		return
+	_continue.visible = Game.furthest_dim > 0
+	_continue.text = "CONTINUE\nDIMENSION %d" % (Game.furthest_dim + 1)
 
 
 func _build_suits(root: Control) -> void:

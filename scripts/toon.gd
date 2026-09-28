@@ -70,30 +70,64 @@ static func merged_mesh(path: String) -> ArrayMesh:
 	if mis.size() == 1:
 		var only := mis[0] as MeshInstance3D
 		var xf0 := _xform_to(only, inst) if only != inst else Transform3D.IDENTITY
-		if xf0.is_equal_approx(Transform3D.IDENTITY) and only.mesh.get_surface_count() == 1:
+		var t0 := _find_texture(only.get_active_material(0))
+		if t0 and xf0.is_equal_approx(Transform3D.IDENTITY) and only.mesh.get_surface_count() == 1:
 			var m0 := only.mesh.duplicate() as ArrayMesh
-			var t0 := _find_texture(only.get_active_material(0))
-			if t0:
-				m0.surface_set_material(0, material(t0))
+			m0.surface_set_material(0, material(t0))
 			inst.free()
 			_mesh_cache[path] = m0
 			return m0
+	# plain-coloured models (no texture, like the nature kit): paint each
+	# colour into a little palette so the toon shader reads it like a colormap
+	var tex: Texture2D = null
+	var cols: Array[Color] = []
+	for n in mis:
+		var mi := n as MeshInstance3D
+		for s in mi.mesh.get_surface_count():
+			var mat := mi.get_active_material(s)
+			var t := _find_texture(mat)
+			if t and tex == null:
+				tex = t
+			elif not t and mat is BaseMaterial3D and _color_index(cols, (mat as BaseMaterial3D).albedo_color) < 0:
+				cols.append((mat as BaseMaterial3D).albedo_color)
+	var painted := tex == null and not cols.is_empty()
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var tex: Texture2D = null
-	for n in inst.find_children("*", "MeshInstance3D", true, false):
+	for n in mis:
 		var mi := n as MeshInstance3D
-		var xf := _xform_to(mi, inst)
+		var xf := _xform_to(mi, inst) if mi != inst else Transform3D.IDENTITY
 		for s in mi.mesh.get_surface_count():
-			st.append_from(mi.mesh, s, xf)
-			if tex == null:
-				tex = _find_texture(mi.get_active_material(s))
+			var mat := mi.get_active_material(s)
+			if painted and mat is BaseMaterial3D:
+				var i := _color_index(cols, (mat as BaseMaterial3D).albedo_color)
+				var arrays := mi.mesh.surface_get_arrays(s)
+				var uvs := PackedVector2Array()
+				uvs.resize((arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+				uvs.fill(Vector2((i + 0.5) / cols.size(), 0.5))
+				arrays[Mesh.ARRAY_TEX_UV] = uvs
+				var tmp := ArrayMesh.new()
+				tmp.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+				st.append_from(tmp, 0, xf)
+			else:
+				st.append_from(mi.mesh, s, xf)
+	if painted:
+		var img := Image.create(cols.size() * 8, 8, false, Image.FORMAT_RGB8)
+		for i in cols.size():
+			img.fill_rect(Rect2i(i * 8, 0, 8, 8), cols[i])
+		tex = ImageTexture.create_from_image(img)
 	var mesh := st.commit()
 	if tex:
 		mesh.surface_set_material(0, material(tex))
 	inst.free()
 	_mesh_cache[path] = mesh
 	return mesh
+
+
+static func _color_index(cols: Array[Color], c: Color) -> int:
+	for i in cols.size():
+		if cols[i].is_equal_approx(c):
+			return i
+	return -1
 
 
 static func _xform_to(n: Node3D, root: Node) -> Transform3D:
