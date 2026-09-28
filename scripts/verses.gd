@@ -365,7 +365,7 @@ const LIST := [
 		"rim": ["#5affff", "#ff8a3a"], "fog": ["#8a4a6a", "#3a1a4a"],
 		"ground": "#4a3a5a", "wall": "#c8a0c8", "hue": 0.9,
 		"music": "title", "fall": "WHOOPS!", "bots": [["normal", 10], ["speedy", 4], ["big", 1]],
-		"intro": ["Look UP! There's a city on the ceiling!", "Two cities for the price of one!"],
+		"intro": ["Look UP! A whole city is hanging from the sky!", "Two cities for the price of one!"],
 	},
 	{
 		"name": "RAINBOW-VERSE", "layout": "rings", "kit": "tall", "rainbow": true,

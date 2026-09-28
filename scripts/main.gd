@@ -48,6 +48,8 @@ var _last_state := -1
 var _chapter_wait := 0.0
 var _boss_started := false
 var _was_captured := false
+var _last_done := -1
+var _hide_t := 0.0
 
 const START := Vector3(8, 1, 40)
 # The dimensions in story order: Noir, Candy, the fifty verses from
@@ -419,6 +421,15 @@ func _wave_progress() -> void:
 			alive.append(b)
 	objective_bots = alive
 	var done := _obj_total - alive.size()
+	# never get stuck: bots that hide too long come out to fight
+	if done != _last_done:
+		_last_done = done
+		_hide_t = 0.0
+	elif not alive.is_empty() and not get_tree().paused:
+		_hide_t += get_process_delta_time()
+		if _hide_t > 40.0:
+			_hide_t = 0.0
+			_call_out(alive)
 	if _obj_total > 0:
 		var where := dim.title if dim else "CITY"
 		hud.set_objective("%s: SMASH THE BOTS  (%d/%d)" % [where, done, _obj_total])
@@ -471,6 +482,18 @@ func _spawn_wave(count: int, big: bool, objective := true, near := Vector3.INF, 
 			objective_bots.append(b)
 	Fx.glitch(0.5)
 	Sfx.play("glitch", 0.1)
+
+
+## The last bots were hiding somewhere hard to reach: bring them to the hero.
+func _call_out(alive: Array) -> void:
+	Game.say("COME OUT, BOTS!", 2.0)
+	Sfx.play("glitch")
+	for i in alive.size():
+		var b := alive[i] as Node3D
+		var a := i * TAU / alive.size()
+		b.global_position = player.center() + Vector3(cos(a) * 14.0, 7.0, sin(a) * 14.0)
+		b.set("home", b.global_position)
+		Fx.word("POP!", b.global_position, "small", Color(1, 0.9, 0.2))
 
 
 ## A big mixed group of objective bots: plan = [["normal", 10], ["speedy", 3], ["big", 2]].

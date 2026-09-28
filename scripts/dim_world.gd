@@ -443,24 +443,28 @@ func _grid() -> void:
 		_ceiling_city()
 
 
-## Upside-down towers hanging from a floating ceiling.
+## Upside-down towers hanging in the sky, on a grid so none overlap.
 func _ceiling_city() -> void:
 	sky_ceil = 150.0
-	add_disc(130.0, 6.0, Vector3(0, 186, 0), _ground().lightened(0.2), _pattern("grid", _ground().lightened(0.2), _ground()))
 	var wall := _c("wall", "#ffffff")
 	var hue: float = theme.get("hue", 0.0)
-	for k in 26:
-		var a := rng.randf() * TAU
-		var r := rng.randf_range(10.0, 120.0)
-		var names: Array = KITS["tall"]
-		var path: String = CITY + names[rng.randi() % names.size()] + ".glb"
-		var ab := Toon.merged_mesh(path).get_aabb()
-		var s := 13.0 / maxf(ab.size.x, ab.size.z)
-		var p := Vector3(cos(a) * r, 180.0, sin(a) * r)
-		var xf := Transform3D(Basis(Vector3.RIGHT, PI) * Basis(Vector3.UP, rng.randf() * TAU) * Basis.from_scale(Vector3.ONE * s), p)
-		add_model(path, xf, {"windows": 1.0, "use_custom": 1.0}, Color(wall.r, wall.g, wall.b, hue + 0.5))
-		add_colliders(Toon.box_stack(Toon.merged_mesh(path)), xf)
-		bot_spots.append(p - Vector3(0, ab.size.y * s + 8.0, 0))
+	for gi in range(-3, 4):
+		for gj in range(-3, 4):
+			if rng.randf() < 0.45 or Vector2(gi, gj).length() > 3.6:
+				continue
+			_hanging_tower(Vector3(gi * 34.0, 0, gj * 34.0), wall, hue)
+
+
+func _hanging_tower(at: Vector3, wall: Color, hue: float) -> void:
+	var names: Array = KITS["tall"]
+	var path: String = CITY + names[rng.randi() % names.size()] + ".glb"
+	var ab := Toon.merged_mesh(path).get_aabb()
+	var s := 13.0 / maxf(ab.size.x, ab.size.z)
+	var p := Vector3(at.x, rng.randf_range(172.0, 188.0), at.z)
+	var xf := Transform3D(Basis(Vector3.RIGHT, PI) * Basis(Vector3.UP, rng.randf() * TAU) * Basis.from_scale(Vector3.ONE * s), p)
+	add_model(path, xf, {"windows": 1.0, "use_custom": 1.0}, Color(wall.r, wall.g, wall.b, hue + 0.5))
+	add_colliders(Toon.box_stack(Toon.merged_mesh(path)), xf)
+	bot_spots.append(p - Vector3(0, ab.size.y * s + 8.0, 0))
 
 
 ## Floating islands over a sea (or the void), like the Candy-Verse.
