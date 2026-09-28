@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Cave Cash</title>
+<meta name="description" content="Mine money in a blocky world. Buy new materials, pickaxes and businesses. Get rich!">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="money-box">
+    <div id="money">$0</div>
+    <div id="income"></div>
+  </div>
+  <div id="top-right">
+    <button id="shop-btn" class="btn gold">SHOP <small>B</small></button>
+    <button id="pause-btn" class="btn small" aria-label="Pause">II</button>
+  </div>
+  <div id="badges"></div>
+  <div id="crosshair"></div>
+  <div id="look-label"></div>
+  <div id="hotbar"></div>
+  <div id="toasts"></div>
+  <div id="big-text"></div>
+  <div id="water-tint"></div>
+</div>
+
+<div id="touch" class="hidden">
+  <div id="stick"><div id="stick-knob"></div></div>
+  <button id="t-mine" class="tbtn">MINE</button>
+  <button id="t-build" class="tbtn">BUILD</button>
+  <button id="t-jump" class="tbtn">JUMP</button>
+</div>
+
+<div id="title" class="screen">
+  <div class="panel title-panel">
+    <h1 class="logo"><span class="l1">CAVE</span> <span class="l2">CA$H</span></h1>
+    <p class="tag">Mine money. Buy stuff. Get RICH!</p>
+    <div id="title-buttons">
+      <button id="play-btn" class="btn big green">PLAY</button>
+      <button id="new-btn" class="btn red hidden">NEW WORLD</button>
+    </div>
+    <div class="how">
+      <div><b>WASD</b> walk &nbsp; <b>SPACE</b> jump &nbsp; <b>SHIFT</b> run</div>
+      <div><b>HOLD LEFT CLICK</b> mine &nbsp; <b>RIGHT CLICK</b> build</div>
+      <div><b>B</b> shop &nbsp; <b>1-9</b> or <b>wheel</b> pick a block &nbsp; <b>M</b> music</div>
+    </div>
+    <p class="tip">Money Ore is where diamonds would be. Dig DEEP in the caves to find it!</p>
+    <p id="loading" class="tip">Digging the caves...</p>
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <div class="panel">
+    <h2>PAUSED</h2>
+    <button id="resume-btn" class="btn big green">KEEP PLAYING</button>
+    <div class="row">
+      <button id="music-btn" class="btn">MUSIC: ON</button>
+      <button id="jump-btn" class="btn">AUTO-JUMP: ON</button>
+    </div>
+    <div class="row">
+      <button id="reset-btn" class="btn red">NEW WORLD</button>
+    </div>
+    <div class="how small-how">
+      <div>Mine ore in <b>THE MINE</b> or in the caves. Ore turns into money!</div>
+      <div>Buy new materials, faster pickaxes and businesses in the <b>SHOP</b>.</div>
+      <div>Every upgrade costs <b>DOUBLE</b> the one before.</div>
+    </div>
+  </div>
+</div>
+
+<div id="confirm" class="screen hidden">
+  <div class="panel">
+    <h2>START OVER?</h2>
+    <p>Your money, businesses and buildings will be gone.</p>
+    <div class="row">
+      <button id="confirm-yes" class="btn red">YES, NEW WORLD</button>
+      <button id="confirm-no" class="btn green">NO WAY</button>
+    </div>
+  </div>
+</div>
+
+<div id="shop" class="screen hidden">
+  <div class="panel shop-panel">
+    <div class="shop-head">
+      <h2>SHOP</h2>
+      <div id="shop-money">$0</div>
+      <button id="shop-close" class="btn red small" aria-label="Close">X</button>
+    </div>
+    <button id="x2-btn" class="btn x2"></button>
+    <div class="tabs">
+      <button class="tab" data-tab="ores">MATERIALS</button>
+      <button class="tab" data-tab="picks">PICKAXES</button>
+      <button class="tab" data-tab="biz">BUSINESSES</button>
+      <button class="tab" data-tab="blocks">BLOCKS</button>
+    </div>
+    <div id="shop-list"></div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

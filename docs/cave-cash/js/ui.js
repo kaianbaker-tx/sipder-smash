@@ -1,0 +1,266 @@
+// Everything on the screen: money, hotbar, messages and the shop.
+import { ORES, PICKS, BUSINESSES, PACKS, DOUBLE_MONEY_COST, bizCost, bizIncome, moneyOreValue, money } from './data.js';
+import { B, BLOCKS, PLACEABLE } from './blocks.js';
+import { blockIcon } from './atlas.js';
+import * as sfx from './sound.js';
+
+const $ = (id) => document.getElementById(id);
+
+export class UI {
+  constructor() {
+    this.game = null;
+    this.sel = 0;               // which hotbar block is picked
+    this.tab = 'ores';
+    this.shopOpen = false;
+    this.hooks = {};            // set by main.js: onBizChanged, onBizPopup
+    this.lastMoney = -1;
+    this.lastIncome = -1;
+    this.hotKey = '';
+    this.shopKey = '';
+    $('shop-close').onclick = () => this.hooks.closeShop();
+    document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => { sfx.click(); this.showTab(t.dataset.tab); }));
+    $('shop-list').addEventListener('click', (e) => this.shopClick(e));
+    $('x2-btn').onclick = (e) => { if (!this.game.buyDouble()) this.shake(e.currentTarget); };
+  }
+
+  bind(game) { this.game = game; }
+
+  // ---------- Called by the game ----------
+  toast(msg, kind = '') {
+    const box = $('toasts');
+    const t = document.createElement('div');
+    t.className = 'toast ' + kind;
+    t.textContent = msg;
+    box.appendChild(t);
+    while (box.children.length > 4) box.firstChild.remove();
+    setTimeout(() => t.classList.add('out'), 2800);
+    setTimeout(() => t.remove(), 3300);
+  }
+
+  bigText(text) {
+    const b = $('big-text');
+    b.textContent = text;
+    b.classList.remove('show');
+    void b.offsetWidth;
+    b.classList.add('show');
+  }
+
+  changed() {
+    this.hotKey = '';
+    this.shopKey = '';
+    if (this.shopOpen) this.renderShop();
+  }
+
+  businessChanged(k) { if (this.hooks.onBizChanged) this.hooks.onBizChanged(k); }
+  bizPopup(k, v) { if (this.hooks.onBizPopup) this.hooks.onBizPopup(k, v); }
+
+  // ---------- HUD ----------
+  update() {
+    const g = this.game, s = g.s;
+    const m = Math.floor(s.money);
+    if (m !== this.lastMoney) {
+      const el = $('money');
+      el.textContent = money(m);
+      if (m > this.lastMoney && this.lastMoney >= 0) {
+        el.classList.add('bump');
+        clearTimeout(this.bumpT);
+        this.bumpT = setTimeout(() => el.classList.remove('bump'), 110);
+      }
+      this.lastMoney = m;
+      if (this.shopOpen) this.refreshPrices();
+    }
+    const inc = g.income();
+    if (inc !== this.lastIncome) {
+      $('income').textContent = inc > 0 ? `+${money(inc)} every second` : '';
+      this.lastIncome = inc;
+      $('badges').innerHTML = `<div class="badge">${PICKS[s.pick].name}</div>` + (s.x2 ? '<div class="badge x2">2X MONEY</div>' : '');
+    }
+    this.renderHotbar();
+  }
+
+  setLook(hit, world) {
+    const el = $('look-label');
+    if (!hit) { el.innerHTML = ''; return; }
+    const g = this.game;
+    const region = world.regionAt(hit.x, hit.y, hit.z);
+    const plots = { 10: 0, 11: 1, 12: 2 };
+    if (region === 2) { el.innerHTML = 'SHOP &nbsp;<span class="cash">right-click or press B</span>'; return; }
+    if (region in plots) {
+      const b = BUSINESSES[plots[region]], lv = g.s.biz[plots[region]];
+      el.innerHTML = `${b.name} ${lv ? 'level ' + lv : '- for sale'} &nbsp;<span class="cash">right-click or press B</span>`;
+      return;
+    }
+    const vis = world.visual[hit.id];
+    const bd = BLOCKS[vis];
+    let extra = '';
+    if (hit.id === B.MONEY_ORE) extra = `JACKPOT ${money(moneyOreValue(g.s.ores) * g.mult)}!`;
+    else if (bd.ore !== undefined) extra = money(ORES[bd.ore].value * g.mult);
+    el.innerHTML = `${bd.name}${extra ? ' &nbsp;<span class="cash">' + extra + '</span>' : ''}`;
+  }
+
+  // ---------- Hotbar ----------
+  owned() { return PLACEABLE.filter((id) => (this.game.s.inv[id] || 0) > 0); }
+
+  selectedBlock() {
+    const own = this.owned();
+    if (!own.length) return 0;
+    if (this.sel >= own.length) this.sel = own.length - 1;
+    return own[this.sel];
+  }
+
+  scroll(dir) {
+    const n = this.owned().length;
+    if (!n) return;
+    this.sel = (this.sel + dir + n) % n;
+    this.hotKey = '';
+  }
+
+  pick(slot) {
+    const own = this.owned();
+    const start = this.windowStart(own.length);
+    if (start + slot < own.length) { this.sel = start + slot; this.hotKey = ''; }
+  }
+
+  windowStart(n) { return Math.max(0, Math.min(this.sel - 4, n - 9)); }
+
+  renderHotbar() {
+    const own = this.owned(), inv = this.game.s.inv;
+    this.selectedBlock();
+    const key = own.map((id) => id + ':' + inv[id]).join(',') + '|' + this.sel;
+    if (key === this.hotKey) return;
+    this.hotKey = key;
+    const bar = $('hotbar');
+    if (!own.length) {
+      bar.innerHTML = '<div class="hotbar-hint">Mine dirt, stone and wood to build with them!</div>';
+      return;
+    }
+    const start = this.windowStart(own.length);
+    let html = '';
+    for (let i = 0; i < 9; i++) {
+      const id = own[start + i];
+      if (id === undefined) { html += '<div class="slot empty"></div>'; continue; }
+      html += `<div class="slot${start + i === this.sel ? ' on' : ''}" data-i="${start + i}"><img alt="" src="${blockIcon(id)}"><span class="n">${inv[id]}</span></div>`;
+    }
+    bar.innerHTML = html;
+    bar.querySelectorAll('.slot[data-i]').forEach((el) => {
+      el.onpointerdown = (e) => { e.stopPropagation(); this.sel = +el.dataset.i; this.hotKey = ''; };
+    });
+  }
+
+  // ---------- Shop ----------
+  openShop(tab) {
+    this.shopOpen = true;
+    $('shop').classList.remove('hidden');
+    this.showTab(tab || this.tab);
+  }
+
+  closeShop() {
+    this.shopOpen = false;
+    $('shop').classList.add('hidden');
+  }
+
+  showTab(tab) {
+    this.tab = tab;
+    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === tab));
+    this.shopKey = '';
+    this.renderShop();
+    $('shop-list').scrollTop = 0;
+  }
+
+  renderShop() {
+    const g = this.game, s = g.s;
+    const key = this.tab + JSON.stringify([s.ores, s.pick, s.biz, s.x2]);
+    if (key !== this.shopKey) {
+      this.shopKey = key;
+      $('shop-list').innerHTML = this['tab_' + this.tab]();
+    }
+    const x2 = $('x2-btn');
+    x2.classList.toggle('owned', s.x2);
+    x2.dataset.cost = s.x2 ? '' : DOUBLE_MONEY_COST;
+    x2.innerHTML = s.x2 ? '2X MONEY is ON! Everything pays double!' : `2X MONEY — all money counts double! &nbsp; ${money(DOUBLE_MONEY_COST)}`;
+    this.refreshPrices();
+  }
+
+  refreshPrices() {
+    const m = this.game.s.money;
+    $('shop-money').textContent = money(m);
+    document.querySelectorAll('#shop-list .btn[data-cost]').forEach((b) => b.classList.toggle('cant', m < +b.dataset.cost));
+  }
+
+  tab_ores() {
+    const s = this.game.s, mult = this.game.mult;
+    let html = '';
+    ORES.forEach((o, i) => {
+      const owned = i < s.ores, next = i === s.ores;
+      const right = owned ? '<div class="done">OWNED</div>'
+        : next ? `<button class="btn green" data-buy="ore" data-cost="${o.cost}">BUY ${money(o.cost)}</button>`
+          : `<div class="done" style="color:#b9a4ff">${money(o.cost)}</div>`;
+      html += `<div class="card${!owned && !next ? ' locked' : ''}"><img alt="" src="${blockIcon(o.id)}"><div class="info">
+        <div class="name">${o.name}</div>
+        <div class="sub">Each block = <span class="cash">${money(o.value * mult)}</span>${owned ? '' : next ? ' — buy it and it shows up in THE MINE and the caves!' : ' — buy the one above first'}</div>
+      </div>${right}</div>`;
+    });
+    html += `<div class="card"><img alt="" src="${blockIcon(B.MONEY_ORE)}"><div class="info">
+      <div class="name">Money Ore <span class="tagline">JACKPOT</span></div>
+      <div class="sub">Where diamonds would be! Deep in the caves. Each = <span class="cash">${money(moneyOreValue(s.ores) * mult)}</span></div>
+    </div><div class="done">FREE</div></div>`;
+    return html;
+  }
+
+  tab_picks() {
+    const s = this.game.s;
+    return PICKS.map((p, i) => {
+      const right = i === s.pick ? '<div class="done">USING</div>'
+        : i < s.pick ? '<div class="done" style="opacity:.6">OLD</div>'
+          : i === s.pick + 1 ? `<button class="btn green" data-buy="pick" data-cost="${p.cost}">BUY ${money(p.cost)}</button>`
+            : `<div class="done" style="color:#b9a4ff">${money(p.cost)}</div>`;
+      return `<div class="card${i > s.pick + 1 ? ' locked' : ''}"><div class="ico" style="background:${p.color}">⛏</div><div class="info">
+        <div class="name">${p.name}</div><div class="sub">Mines ${p.speed}x as fast as wood</div>
+      </div>${right}</div>`;
+    }).join('');
+  }
+
+  tab_biz() {
+    const s = this.game.s, mult = this.game.mult;
+    const order = [2, 0, 1];
+    return order.map((k) => {
+      const b = BUSINESSES[k], lv = s.biz[k];
+      const icon = k === 0 ? B.LEMON : k === 1 ? B.PIZZA : B.MONEY_BLOCK;
+      const now = bizIncome(b, lv) * mult, nxt = bizIncome(b, lv + 1) * mult;
+      const right = lv >= b.max ? '<div class="done">MAX!</div>'
+        : `<button class="btn green" data-buy="biz" data-k="${k}" data-cost="${bizCost(b, lv)}">${lv ? 'UPGRADE' : 'BUY'} ${money(bizCost(b, lv))}</button>`;
+      return `<div class="card${k === 2 ? ' main' : ''}"><img alt="" src="${blockIcon(icon)}"><div class="info">
+        <div class="name">${b.name}<span class="tagline">${b.size}</span></div>
+        <div class="sub">${lv ? `Level ${lv} — makes <span class="cash">${money(now)}</span> every second` : 'Not yours yet'}${lv < b.max ? ` → <span class="cash">${money(nxt)}</span>/sec` : ''}</div>
+        <div class="bar"><i style="width:${(lv / b.max) * 100}%"></i></div>
+      </div>${right}</div>`;
+    }).join('');
+  }
+
+  tab_blocks() {
+    return PACKS.map((p, i) => {
+      const count = p.give.reduce((a, g) => a + g[1], 0);
+      return `<div class="card"><img alt="" src="${blockIcon(p.icon)}"><div class="info">
+        <div class="name">${p.name}</div><div class="sub">${count} blocks for building</div>
+      </div><button class="btn green" data-buy="pack" data-i="${i}" data-cost="${p.cost}">BUY ${money(p.cost)}</button></div>`;
+    }).join('');
+  }
+
+  shopClick(e) {
+    const b = e.target.closest('[data-buy]');
+    if (!b) return;
+    const g = this.game;
+    let ok = false;
+    if (b.dataset.buy === 'ore') ok = g.buyOre();
+    else if (b.dataset.buy === 'pick') ok = g.buyPick();
+    else if (b.dataset.buy === 'biz') ok = g.buyBiz(+b.dataset.k);
+    else if (b.dataset.buy === 'pack') ok = g.buyPack(+b.dataset.i);
+    if (!ok) this.shake(b);
+  }
+
+  shake(el) {
+    el.classList.remove('shake');
+    void el.offsetWidth;
+    el.classList.add('shake');
+  }
+}
