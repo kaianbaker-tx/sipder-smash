@@ -310,6 +310,7 @@ func _continue_game() -> void:
 
 func _skip_to(n: int) -> void:
 	hud._captions.clear()
+	hud.set_hint_visible(n <= 1)
 	_chapter_wait = 0.1
 	chapter = n - 1
 
