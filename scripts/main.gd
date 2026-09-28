@@ -657,7 +657,12 @@ func _open_gate(to: int) -> void:
 	if not _free_roam:
 		hud.set_objective("JUMP INTO THE PORTAL!")
 		Game.say("A PORTAL OPENED!", 2.0)
-		hud.narrate(["The bots came from ANOTHER DIMENSION!", "Jump into the portal and go after them!"] if to >= 0 else ["Portal home is open!"], 2.4)
+		var lines: Array = [["The bots came from ANOTHER DIMENSION!", "Jump into the portal and go after them!"],
+			["More bots escaped through a portal!", "After them!"],
+			["Another portal! Where does THIS one go?"],
+			["Follow those bots! Jump in!"],
+			["The bots are running away... to the NEXT dimension!"]]
+		hud.narrate((lines[0] if to <= 1 else lines[randi() % lines.size()]) if to >= 0 else ["Portal home is open!"], 2.4)
 	Sfx.play("glitch")
 	Fx.glitch(0.5)
 
