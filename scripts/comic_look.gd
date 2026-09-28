@@ -1,9 +1,10 @@
 extends Node
-## Sets up the Spider-Verse look: comic sky, environment and the full-screen
-## comic pass (ink lines, misprint, speed lines, impact frames).
-## Other scripts poke `post` (the ShaderMaterial) to trigger effects.
+## Sets up the Spider-Verse look: comic sky, environment, the 3D ink-line
+## pass (`post`) and the 2D finishing pass (`fx`: misprint, speed lines,
+## impact frames, glitch). Other scripts call impact(), glitch(), hurt().
 
 var post: ShaderMaterial
+var fx: ShaderMaterial
 var quad: MeshInstance3D
 var env: Environment
 var _time := 0.0
@@ -16,9 +17,21 @@ var scale_3d := 1.0
 var _fps_t := 0.0
 var _fps_frames := 0
 var _slow := 0
+# the home city's colours (from project.godot) and noir switches
+var home_palette := {}
+var _suit_noir := false
+var _palette_noir := 0.0
 
 
 func _ready() -> void:
+	for prop in ProjectSettings.get_property_list():
+		var n: String = prop.name
+		if n.begins_with("shader_globals/"):
+			var key := n.trim_prefix("shader_globals/")
+			if key in ["world_time", "dot_size", "noir"]:
+				continue
+			home_palette[key] = (ProjectSettings.get_setting(n) as Dictionary).value
+	home_palette["portal_power"] = 0.0
 	var we := WorldEnvironment.new()
 	env = Environment.new()
 	env.background_mode = Environment.BG_SKY
@@ -46,6 +59,18 @@ func _ready() -> void:
 	quad.extra_cull_margin = 16384.0
 	quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	quad.sorting_offset = 1000.0
+
+	# the 2D finishing pass sits under all the HUD layers
+	var layer := CanvasLayer.new()
+	layer.layer = 1
+	add_child(layer)
+	var rect := ColorRect.new()
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fx = ShaderMaterial.new()
+	fx.shader = preload("res://shaders/screen_fx.gdshader")
+	rect.material = fx
+	layer.add_child(rect)
 
 
 ## Put the comic pass in front of a camera.
@@ -88,8 +113,22 @@ func hurt(strength := 1.0) -> void:
 	_hurt = maxf(_hurt, strength)
 
 
+## The black-and-white Noir suit.
 func set_noir(on: bool) -> void:
-	RenderingServer.global_shader_parameter_set("noir", 1.0 if on else 0.0)
+	_suit_noir = on
+	_apply_noir()
+
+
+## Switch every world colour at once (a dimension's palette, or {} for home).
+func apply_palette(p: Dictionary) -> void:
+	for k in home_palette:
+		RenderingServer.global_shader_parameter_set(k, p.get(k, home_palette[k]))
+	_palette_noir = p.get("noir", 0.0)
+	_apply_noir()
+
+
+func _apply_noir() -> void:
+	RenderingServer.global_shader_parameter_set("noir", maxf(_palette_noir, 1.0 if _suit_noir else 0.0))
 
 
 func _process(delta: float) -> void:
@@ -105,10 +144,10 @@ func _process(delta: float) -> void:
 	RenderingServer.global_shader_parameter_set("dot_size", maxf(3.0, h * vp.scaling_3d_scale / 150.0))
 	_auto_quality(delta)
 	# impact frames are short and hard: hold for two frames then snap off
-	post.set_shader_parameter("impact", 1.0 if _impact > 0.5 else 0.0)
+	fx.set_shader_parameter("impact", 1.0 if _impact > 0.5 else 0.0)
 	_impact = maxf(0.0, _impact - delta * 12.0)
-	post.set_shader_parameter("glitch", _glitch)
+	fx.set_shader_parameter("glitch", _glitch)
 	_glitch = move_toward(_glitch, 0.0, delta * 2.5)
-	post.set_shader_parameter("hurt", _hurt)
+	fx.set_shader_parameter("hurt", _hurt)
 	_hurt = move_toward(_hurt, 0.0, delta * 2.0)
-	post.set_shader_parameter("speed", speed)
+	fx.set_shader_parameter("speed", speed)

@@ -29,17 +29,17 @@ func _ready() -> void:
 	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 	logo.position = Vector2(30, 14)
-	logo.size = Vector2(560, 340)
+	logo.size = Vector2(560, 380)
 	logo.rotation = -0.04
 	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(logo)
-	logo.pivot_offset = Vector2(280, 170)
+	logo.pivot_offset = Vector2(280, 190)
 	var tw := logo.create_tween().set_loops()
 	tw.tween_property(logo, "scale", Vector2(1.03, 1.03), 0.6).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(logo, "scale", Vector2(1.0, 1.0), 0.6).set_trans(Tween.TRANS_SINE)
 
 	var by := UiKit.label("A GAME BY KAIAN", 34, Color(1, 1, 1), UiKit.LUCKY, 10)
-	by.position = Vector2(70, 350)
+	by.position = Vector2(70, 398)
 	by.rotation = -0.04
 	by.add_theme_color_override("font_shadow_color", Color(1, 0.2, 0.6))
 	by.add_theme_constant_override("shadow_offset_x", 4)
@@ -47,7 +47,7 @@ func _ready() -> void:
 	root.add_child(by)
 
 	_main_box = VBoxContainer.new()
-	_main_box.position = Vector2(70, 410)
+	_main_box.position = Vector2(70, 452)
 	_main_box.add_theme_constant_override("separation", 16)
 	root.add_child(_main_box)
 	_play = UiKit.button("PLAY!", 64)
@@ -85,7 +85,7 @@ func _ready() -> void:
 
 func _build_suits(root: Control) -> void:
 	_suits = UiKit.panel(Color(1, 0.95, 0.8))
-	_suits.position = Vector2(400, 330)
+	_suits.position = Vector2(410, 385)
 	_suits.custom_minimum_size = Vector2(400, 0)
 	_suits.visible = false
 	root.add_child(_suits)
@@ -151,7 +151,7 @@ func _build_help(root: Control) -> void:
 		h.add_child(a)
 		h.add_child(UiKit.label(l[1], 22, Color(0.1, 0.02, 0.15), UiKit.LUCKY, 0))
 		v.add_child(h)
-	v.add_child(UiKit.label("Smash the Glitch-Bots, grab spider tokens,\nbeat THE GLITCH KING, and fly through the pink\nring over the park for RING RUSH!", 20, Color(1, 0.3, 0.55), UiKit.LUCKY, 0))
+	v.add_child(UiKit.label("Smash the Glitch-Bots, jump through the portals\nto other dimensions, and beat THE GLITCH KING\nin the Glitch-Verse to save the city!", 20, Color(1, 0.3, 0.55), UiKit.LUCKY, 0))
 
 
 func _toggle_suits() -> void:

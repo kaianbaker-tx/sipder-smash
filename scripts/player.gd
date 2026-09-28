@@ -24,6 +24,7 @@ const SKY_CEIL := 125.0
 const ISLAND_EDGE := 215.0
 
 var rig: CamRig
+var area: Dimension          # the dimension we're in, or null in the home city
 var model: HeroModel
 var web: WebLine
 var state := State.AIR
@@ -352,16 +353,24 @@ func find_anchor() -> Dictionary:
 		# no building close enough: webs still stick to the comic sky,
 		# but only up to about rooftop height (no swinging to the moon!)
 		var ceil_y := SKY_CEIL
-		var city := get_tree().get_first_node_in_group("city")
-		if city and "tower_top" in city:
-			var tt: Vector3 = city.tower_top
-			if Vector2(tt.x - pos.x, tt.z - pos.z).length() < 70.0:
-				ceil_y = maxf(ceil_y, tt.y + 30.0)
 		var p := pos + fwd * 20.0 + Vector3.UP * 26.0
-		p.y = minf(p.y, ceil_y)
-		# the sky only holds webs above the island, not out over the river
-		if maxf(absf(p.x), absf(p.z)) > ISLAND_EDGE:
-			return {}
+		if area:
+			# in a dimension: webs stick to its sky, inside its borders
+			var ac := area.global_position
+			ceil_y = ac.y + area.sky_ceil
+			p.y = minf(p.y, ceil_y)
+			if Vector2(p.x - ac.x, p.z - ac.z).length() > area.radius:
+				return {}
+		else:
+			var city := get_tree().get_first_node_in_group("city")
+			if city and "tower_top" in city:
+				var tt: Vector3 = city.tower_top
+				if Vector2(tt.x - pos.x, tt.z - pos.z).length() < 70.0:
+					ceil_y = maxf(ceil_y, tt.y + 30.0)
+			p.y = minf(p.y, ceil_y)
+			# the sky only holds webs above the island, not out over the river
+			if maxf(absf(p.x), absf(p.z)) > ISLAND_EDGE:
+				return {}
 		if p.y < pos.y + 6.0:
 			return {}
 		best = {"pos": p, "sky": true}
@@ -863,6 +872,8 @@ func respawn(to := Vector3.INF) -> void:
 
 
 func _safe_spot() -> Vector3:
+	if area:
+		return area.safe_spot(global_position)
 	var city := get_tree().get_first_node_in_group("city")
 	if city and "roof_spots" in city:
 		var best := _last_safe
@@ -877,6 +888,12 @@ func _safe_spot() -> Vector3:
 
 
 func _check_hazards() -> void:
+	if area:
+		if global_position.y < area.global_position.y + area.fall_y:
+			Fx.word(area.fall_word, global_position + Vector3(0, 1.5, 0), "big", Color(0.3, 0.9, 1.0))
+			Sfx.play("splash" if area.fall_word == "SPLOOSH!" else "glitch", 0.1)
+			respawn()
+		return
 	if global_position.y < -1.8:
 		Fx.word("SPLOOSH!", global_position + Vector3(0, 1.5, 0), "big", Color(0.3, 0.9, 1.0))
 		Fx.burst(global_position, Color(0.5, 0.8, 1.0), 20, 10.0, 0.3)
