@@ -12,6 +12,11 @@ global uniform float world_time;
 global uniform vec3 portal_dir;
 global uniform float portal_power;
 global uniform float portal_size;
+global uniform vec4 cloud_low : source_color;
+global uniform vec4 cloud_high : source_color;
+global uniform float cloud_amount;
+global uniform float moon_power;
+global uniform float star_power;
 
 uniform vec3 moon_dir = vec3(-0.45, 0.42, -0.78);
 
@@ -68,30 +73,30 @@ void sky() {
 		float st = step(0.985, hash(floor(sp)));
 		float tw = 0.5 + 0.5 * sin(world_time * 3.0 + hash(floor(sp) + 3.0) * 20.0);
 		vec2 f = fract(sp) - 0.5;
-		col += vec3(1.0, 0.95, 0.85) * st * tw * (1.0 - smoothstep(0.05, 0.2, length(f))) * smoothstep(0.15, 0.4, y);
+		col += vec3(1.0, 0.95, 0.85) * st * tw * (1.0 - smoothstep(0.05, 0.2, length(f))) * smoothstep(0.15, 0.4, y) * star_power;
 	}
 
 	// moon with an ink rim and halftone shading
 	float md = dot(dir, normalize(moon_dir));
-	float moon = smoothstep(0.9978, 0.9981, md);
-	float moon_rim = smoothstep(0.9972, 0.9975, md) - moon;
+	float moon = smoothstep(0.9978, 0.9981, md) * moon_power;
+	float moon_rim = smoothstep(0.9972, 0.9975, md) * moon_power - moon;
 	vec3 mcol = vec3(1.0, 0.94, 0.82);
 	vec3 mside = normalize(cross(normalize(moon_dir), vec3(0.0, 1.0, 0.0)));
 	float shade = dot(dir - normalize(moon_dir), mside) * 40.0;
 	mcol = mix(mcol, vec3(0.95, 0.6, 0.7), dots(frag, clamp(shade + 0.3, 0.0, 0.7), dot_size * 0.9));
 	col = mix(col, mcol, moon);
 	col = mix(col, vec3(0.1, 0.02, 0.15), moon_rim);
-	col += vec3(0.8, 0.5, 0.9) * pow(max(md, 0.0), 400.0) * 0.4;
+	col += vec3(0.8, 0.5, 0.9) * pow(max(md, 0.0), 400.0) * 0.4 * moon_power;
 
 	// clouds: flat comic shapes with ink edges
-	if (y > -0.02) {
+	if (y > -0.02 && cloud_amount > 0.0) {
 		vec2 cp = dir.xz / (y + 0.12) * 1.3 + vec2(world_time * 0.01, 0.0);
 		float n = fbm(cp * 1.2);
-		float th = 0.62;
+		float th = 0.62 + (1.0 - cloud_amount) * 0.25;
 		float cloud = smoothstep(th - 0.005, th + 0.005, n);
 		float edge = smoothstep(th - 0.025, th - 0.012, n) * (1.0 - cloud);
 		float fade = smoothstep(-0.02, 0.1, y) * (1.0 - smoothstep(0.5, 0.8, y));
-		vec3 ccol = mix(vec3(1.0, 0.55, 0.62), vec3(0.62, 0.32, 0.8), smoothstep(0.02, 0.35, y));
+		vec3 ccol = mix(cloud_low.rgb, cloud_high.rgb, smoothstep(0.02, 0.35, y));
 		float inner = smoothstep(th + 0.02, th + 0.12, n);
 		ccol = mix(ccol, ccol * vec3(0.75, 0.7, 1.0), dots(frag, inner * 0.5, dot_size * 1.2));
 		col = mix(col, ccol, cloud * fade);

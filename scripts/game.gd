@@ -24,6 +24,7 @@ var token_total := 0
 var bots_smashed := 0
 var suit := "classic"
 var gold_unlocked := false
+var furthest_dim := -1   # the furthest dimension reached (for CONTINUE)
 var mouse_sens := 0.0025
 var invert_y := false
 var touch_mode := false
@@ -164,6 +165,13 @@ func set_suit(s: String) -> void:
 	_save()
 
 
+## Remember the furthest dimension reached, so CONTINUE can start there.
+func save_progress(dim_index: int) -> void:
+	if dim_index > furthest_dim:
+		furthest_dim = dim_index
+		_save()
+
+
 func suit_texture() -> Texture2D:
 	return load(SUITS[suit].tex)
 
@@ -179,6 +187,7 @@ func _save() -> void:
 	cfg.set_value("game", "gold", gold_unlocked)
 	cfg.set_value("game", "invert_y", invert_y)
 	cfg.set_value("game", "mouse_sens", mouse_sens)
+	cfg.set_value("game", "furthest_dim", furthest_dim)
 	cfg.save("user://spider_smash.cfg")
 
 
@@ -189,5 +198,6 @@ func _load() -> void:
 		gold_unlocked = cfg.get_value("game", "gold", false)
 		invert_y = cfg.get_value("game", "invert_y", false)
 		mouse_sens = cfg.get_value("game", "mouse_sens", 0.0025)
+		furthest_dim = cfg.get_value("game", "furthest_dim", -1)
 	if suit == "gold" and not gold_unlocked:
 		suit = "classic"

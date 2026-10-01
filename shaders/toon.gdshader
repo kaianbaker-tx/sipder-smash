@@ -38,6 +38,9 @@ uniform vec4 flash_color : source_color = vec4(1.0);
 uniform float palette_shift = 0.0;
 // 1 = take wall tint (rgb) and hue shift (a) from the MultiMesh instance data
 uniform float use_custom = 0.0;
+// > 0: map the texture in world space (repeats every 1/world_uv metres),
+// so a pattern keeps the same size on a small step and a huge floor
+uniform float world_uv = 0.0;
 
 varying vec3 world_pos;
 varying vec3 world_nrm;
@@ -88,7 +91,12 @@ float hatch(vec2 frag, float size, float amount) {
 }
 
 void fragment() {
-	vec3 tex = texture(albedo_tex, UV).rgb;
+	vec2 uv = UV;
+	if (world_uv > 0.0) {
+		vec3 an = abs(world_nrm);
+		uv = (an.y > max(an.x, an.z) ? world_pos.xz : (an.x > an.z ? world_pos.zy : world_pos.xy)) * world_uv;
+	}
+	vec3 tex = texture(albedo_tex, uv).rgb;
 	// Kenney colour maps are a grid of gradient swatches (16 x 4 on the city
 	// kits). Decide "window" / "wall" from the swatch centre so a gradient
 	// never flips the decision half way across a pane.

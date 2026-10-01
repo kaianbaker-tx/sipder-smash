@@ -18,10 +18,16 @@ what he meant. Short sentences, one idea at a time.
   `[shader_globals]` in `project.godot`.
 - Hero: `scripts/player.gd` (moves) and `scripts/hero_model.gd` (poses).
 - Dimensions: `scripts/dimension.gd` is the base; `dim_noir.gd`,
-  `dim_candy.gd` and `dim_glitch.gd` build them far from the city. Each has
-  its own colours (`palette`), bots (`bot_plan`) and respawn spots.
-  `scripts/gate.gd` is the walk-through portal. Story: chapters 1-2 in the
-  city, 3 Noir-Verse, 4 Candy-Verse, 5 Glitch-Verse + Glitch King.
+  `dim_candy.gd` and `dim_glitch.gd` are hand-built. The 50 verses in
+  between are recipes in `scripts/verses.gd`, built by `scripts/dim_world.gd`
+  (layouts: grid, islands, pillars, rings, stacks, canyon, giants, maze,
+  spiral, cake, dominoes). Each has its own colours (`palette`), bots
+  (`bot_plan`) and respawn spots. `scripts/gate.gd` is the walk-through
+  portal. Story: chapters 1-2 in the city, then dimension 1 Noir, 2 Candy,
+  3-52 the verses, 53 Glitch-Verse + Glitch King (chapter = dimension + 2).
+  Only the dimension you are in is kept in memory. CONTINUE on the title
+  starts at the furthest dimension reached.
+- `tools/test/verse_view.tscn -- --from=0 --to=49 --out=DIR` renders every verse.
 - Suits, logo, signs and sounds are made by `tools/gen_suits.py`,
   `tools/gen_ui.py` and `tools/gen_audio.py`. Edit those, then re-run them.
 - `tools/check.sh` checks every script. `tools/autoplay.gd` plays the game

@@ -19,6 +19,7 @@ var radius := 160.0                   # webs stick to the sky only inside this c
 var sky_ceil := 110.0                 # ...and only up to this height (local)
 var fall_y := -1.8                    # falling below this (local) sends you back
 var fall_word := "WHOOPS!"
+var gravity := 1.0                    # 0.5 = floaty moon jumps
 var start_pos := Vector3.ZERO         # local
 var start_look := Vector3.FORWARD     # which way the camera faces on arrival
 var arena := Vector3.ZERO             # local; the boss fights here (Glitch-Verse)
@@ -26,6 +27,7 @@ var bot_spots: Array[Vector3] = []    # local points in the air for bots
 var safe_spots: Array[Vector3] = []   # local points on solid ground
 var gate_spots: Array[Vector3] = []   # local open ground a portal fits on
 var built := false
+var surface_opts := {}                # toon options for blocks, discs and poles
 
 var rng := RandomNumberGenerator.new()
 var _mm := {}
@@ -168,7 +170,7 @@ func add_block(size: Vector3, pos: Vector3, col: Color, collide := true, tex: Te
 	var bm := BoxMesh.new()
 	bm.size = size
 	mi.mesh = bm
-	mi.material_override = Toon.material(tex if tex else color_tex(col))
+	mi.material_override = Toon.material(tex if tex else color_tex(col), surface_opts)
 	mi.transform = Transform3D(rot, pos)
 	add_child(mi)
 	if collide:
@@ -186,7 +188,7 @@ func add_disc(radius_m: float, height: float, pos: Vector3, col: Color, tex: Tex
 	cm.radial_segments = 32
 	cm.rings = 1
 	mi.mesh = cm
-	mi.material_override = Toon.material(tex if tex else color_tex(col))
+	mi.material_override = Toon.material(tex if tex else color_tex(col), surface_opts)
 	mi.position = pos - Vector3(0, height * 0.5, 0)
 	add_child(mi)
 	var body := StaticBody3D.new()
@@ -212,7 +214,7 @@ func add_pole(pos: Vector3, height: float, radius_m: float, tex: Texture2D) -> v
 	cm.height = height
 	cm.radial_segments = 12
 	mi.mesh = cm
-	mi.material_override = Toon.material(tex)
+	mi.material_override = Toon.material(tex, surface_opts)
 	mi.position = pos + Vector3(0, height * 0.5, 0)
 	add_child(mi)
 	add_colliders([AABB(Vector3(-radius_m, -height * 0.5, -radius_m), Vector3(radius_m * 2, height, radius_m * 2))], Transform3D(Basis(), mi.position))

@@ -244,7 +244,7 @@ func _air(delta: float) -> void:
 	hv *= 1.0 - 0.15 * delta
 	velocity.x = hv.x
 	velocity.z = hv.z
-	velocity.y = maxf(velocity.y - GRAV * delta, -MAX_FALL)
+	velocity.y = maxf(velocity.y - GRAV * _grav() * delta, -MAX_FALL)
 	_fall_peak = minf(_fall_peak, velocity.y)
 	if velocity.y > 0.0:
 		_fall_top = global_position.y
@@ -399,7 +399,7 @@ func _start_swing() -> void:
 func _swing(delta: float) -> void:
 	_swing_t += delta
 	var inp := move_input()
-	velocity.y -= GRAV * delta
+	velocity.y -= GRAV * _grav() * delta
 	var rope := center() - _anchor
 	var rn := rope.normalized()
 	var tang := inp - rn * inp.dot(rn)
@@ -869,6 +869,11 @@ func respawn(to := Vector3.INF) -> void:
 	model.aim_right_w = 0.0
 	model.aim_left_w = 0.0
 	_set_state(State.AIR)
+
+
+## Gravity where we are (some dimensions are floaty).
+func _grav() -> float:
+	return area.gravity if area else 1.0
 
 
 func _safe_spot() -> Vector3:
