@@ -576,7 +576,7 @@ func _trainer(n: NPC, spotted: bool) -> void:
 		for t in n.team:
 			team.append(Dex.make(t[0], t[1]))
 		if n == rival:
-			team = [Dex.make(Game.flags.get("rival_starter", "bubbloo"), 9), Dex.make("fluffle", 7)]
+			team = [Dex.make(Game.flags.get("rival_starter", "bubbloo"), 8), Dex.make("fluffle", 6)]
 		var r := await _battle(team, {"name": n.title, "skin": n.skin, "gear": n.gear, "rival": n == rival})
 		won = r == "win"
 		if not won:

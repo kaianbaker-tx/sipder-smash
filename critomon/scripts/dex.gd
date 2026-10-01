@@ -87,7 +87,7 @@ const SPECIES := {
 	"pebblit": {
 		"name": "PEBBLIT", "type": "rock", "hp": 46, "atk": 58, "def": 72, "spd": 24, "xp": 60, "catch": 170,
 		"about": "A tough little rock. It naps in the sun on the side of the road.",
-		"learn": {1: ["tackle", "defense_curl"], 5: ["rock_throw"], 11: ["headbutt"]},
+		"learn": {1: ["tackle", "defense_curl"], 7: ["rock_throw"], 11: ["headbutt"]},
 		"cry": 0.65,
 	},
 	"buzzlet": {

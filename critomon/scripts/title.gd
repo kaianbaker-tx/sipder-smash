@@ -43,8 +43,9 @@ func _ready() -> void:
 	box.anchor_bottom = 1.0
 	box.offset_left = -200
 	box.offset_right = 200
-	box.offset_top = -260
-	box.offset_bottom = -70
+	box.offset_top = -50
+	box.offset_bottom = -50
+	box.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	box.add_theme_constant_override("separation", 16)
 	root.add_child(box)
 	var new_btn := UI.button("NEW GAME", 40, UI.RED, Color.WHITE)

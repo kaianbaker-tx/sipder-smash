@@ -5,7 +5,9 @@ extends Node
 ##   --start=route   skip the lab (get EMBERPUP and go straight to Route 1)
 ##   --until=lab     stop after the lab scene
 ##   --start=title   just take a picture of the title screen
+##   --start=c4bench how long the Connect Four computer thinks
 ##   --start=menu    pictures of the pause menu pages
+##   --start=arena   a strong team walks up to JAX at the Arena
 
 var main: Node
 var shots := ""
@@ -80,6 +82,20 @@ func idle() -> void:
 func _run() -> void:
 	await get_tree().process_frame
 	var start: String = Game.args.get("start", "")
+	if start == "c4bench":
+		# how long does the Connect Four computer think?
+		var c: ConnectFour = main.c4
+		c.grid.resize(42)
+		c.grid.fill(0)
+		for m in [[3, 1], [3, 2], [2, 1], [4, 2]]:
+			var r := ConnectFour._open_row(c.grid, m[0])
+			c.grid[r * 7 + m[0]] = m[1]
+		for depth in [1, 3, 4, 5]:
+			var t := Time.get_ticks_usec()
+			var col: int = await c._ai_move(depth, 2)
+			print("AUTOPLAY: depth ", depth, ": ", (Time.get_ticks_usec() - t) / 1000.0, " ms -> column ", col)
+		get_tree().quit(0)
+		return
 	if start == "title":
 		main.title.show_title()
 		await _wait(4.0)
@@ -109,6 +125,25 @@ func _run() -> void:
 		main.menu._help()
 		await _wait(0.5)
 		shot("help")
+		get_tree().quit(0)
+		return
+	if start == "arena":
+		Game.set_flag("met_prof")
+		Game.set_flag("starter", "sproutle")
+		Game.set_flag("rival_c4")
+		Game.set_flag("rival_starter", "emberpup")
+		Game.add_mon(Dex.make("sproutle", 14))
+		Game.add_mon(Dex.make("bubbloo", 12))
+		Game.give("potion", 3)
+		main.apply_story()
+		main.player.teleport(Vector3(0, 0, -190), 0.0)
+		main.rig.snap()
+		await walk(Vector3(0, 0, -200))
+		await _wait(1.0)
+		await idle()
+		await _wait(1.0)
+		shot("arena")
+		print("AUTOPLAY: arena done. champion=", Game.flag("champion"), " party ", _party_text())
 		get_tree().quit(0)
 		return
 	if start == "route":

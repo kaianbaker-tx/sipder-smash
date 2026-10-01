@@ -45,7 +45,8 @@ func _ready() -> void:
 	add_child(person)
 	person.rotation.y = home_yaw
 	body = StaticBody3D.new()
-	body.collision_layer = 1
+	# layer 3: you bump into people, but the camera and sight lines don't
+	body.collision_layer = 4
 	var cs := CollisionShape3D.new()
 	var cap := CylinderShape3D.new()
 	cap.radius = 0.45

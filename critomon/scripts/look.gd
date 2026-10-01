@@ -8,6 +8,12 @@ var sun: DirectionalLight3D
 var post: ShaderMaterial
 var quad: MeshInstance3D
 var sky_mat: ShaderMaterial
+# auto quality: draw the 3D smaller (and drop shadows) on slow computers
+var scale_3d := 1.0
+var _fps_t := 0.0
+var _frames := 0
+var _slow := 0
+var _testing := "--autoplay" in OS.get_cmdline_user_args()
 
 
 func _ready() -> void:
@@ -78,3 +84,30 @@ func set_indoor(on: bool) -> void:
 
 func shadows(on: bool) -> void:
 	sun.shadow_enabled = on
+
+
+func _process(delta: float) -> void:
+	var vp := get_viewport()
+	# never draw 3D taller than 900 pixels (sharp phone screens), then adapt
+	var cap := minf(1.0, 900.0 / maxf(float(vp.size.y), 1.0))
+	var want := minf(cap, scale_3d)
+	if absf(vp.scaling_3d_scale - want) > 0.01:
+		vp.scaling_3d_scale = want
+	if _testing:
+		return
+	_fps_t += delta
+	_frames += 1
+	if _fps_t < 2.0:
+		return
+	var fps := _frames / _fps_t
+	_fps_t = 0.0
+	_frames = 0
+	if fps < 40.0 and scale_3d > 0.55:
+		_slow += 1
+		if _slow >= 2:
+			_slow = 0
+			scale_3d -= 0.15
+			if scale_3d < 0.75:
+				shadows(false)
+	else:
+		_slow = 0

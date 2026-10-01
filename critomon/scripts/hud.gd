@@ -14,6 +14,7 @@ var balls: Control
 var toast_box: PanelContainer
 var toast_label: Label
 var fade: ColorRect
+var turn_hint: PanelContainer
 var wipe: Control
 var _wipe_t := -1.0
 var _toast_tw: Tween
@@ -91,6 +92,14 @@ func _ready() -> void:
 	wipe.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wipe.draw.connect(_draw_wipe)
 	root.add_child(wipe)
+
+	turn_hint = UI.panel(UI.GOLD)
+	turn_hint.set_anchors_preset(Control.PRESET_CENTER)
+	turn_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tl := UI.label("Turn your phone sideways!", 64)
+	turn_hint.add_child(tl)
+	root.add_child(turn_hint)
+	turn_hint.visible = false
 
 	fade = ColorRect.new()
 	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -199,6 +208,10 @@ func battle_wipe() -> void:
 func _process(_delta: float) -> void:
 	if _wipe_t >= 0.0:
 		wipe.queue_redraw()
+	var sz := get_viewport().get_visible_rect().size
+	turn_hint.visible = Game.touch_mode and sz.y > sz.x * 1.1
+	if turn_hint.visible:
+		turn_hint.position = (sz - turn_hint.size) * 0.5
 
 
 func _draw_wipe() -> void:

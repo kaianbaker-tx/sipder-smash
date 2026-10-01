@@ -22,7 +22,7 @@ var _step_d := 0.0
 
 func _ready() -> void:
 	collision_layer = 2
-	collision_mask = 1
+	collision_mask = 1 | 4
 	floor_snap_length = 0.3
 	var cs := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
