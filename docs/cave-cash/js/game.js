@@ -1,6 +1,7 @@
 // Money, shopping, businesses, the mine growing back, and saving.
-import { ORES, PICKS, BUSINESSES, PACKS, MILESTONES, DOUBLE_MONEY_COST, bizCost, bizIncome, moneyOreValue, money } from './data.js';
+import { ORES, PICKS, BUSINESSES, PACKS, FOODS, BOOMS, HUNGER, MILESTONES, DOUBLE_MONEY_COST, bizCost, bizIncome, moneyOreValue, money } from './data.js';
 import { B, BLOCKS, isOre } from './blocks.js';
+import { isProtected, R } from './world.js';
 import { mineRoll, buildBusiness, PLOTS } from './town.js';
 import { rng } from './noise.js';
 import * as sfx from './sound.js';
@@ -19,11 +20,17 @@ export class Game {
     this.regrow = [];
     this.bizClock = 0;
     this.bizBank = [0, 0, 0];
+    this.hungerClock = 0;
+    this.starveClock = 0;
+    this.healClock = 0;
     this.s = Game.fresh();
   }
 
   static fresh() {
-    return { money: 0, earned: 0, ores: 1, pick: 0, biz: [0, 0, 0], x2: false, inv: {}, milestone: 0, played: 0 };
+    return {
+      money: 0, earned: 0, ores: 1, pick: 0, biz: [0, 0, 0], x2: false, milestone: 0, played: 0,
+      inv: { [B.APPLE]: 3 }, hunger: HUNGER.max, health: 10,
+    };
   }
 
   get mult() { return this.s.x2 ? 2 : 1; }
@@ -71,8 +78,72 @@ export class Game {
       id = B.STONE;  // locked ore: just stone for now
     }
     const give = BLOCKS[id].drop;
-    if (give) this.s.inv[give] = (this.s.inv[give] || 0) + 1;
+    if (give) this.give(give, 1);
+    // Like in Minecraft, leaves sometimes drop an apple.
+    if (id === B.LEAVES && this.r() < 0.15) { this.give(B.APPLE, 1); return { give, apple: true }; }
     return { give };
+  }
+
+  give(id, n) { this.s.inv[id] = (this.s.inv[id] || 0) + n; }
+
+  take(id) {
+    if (!this.s.inv[id]) return false;
+    if (--this.s.inv[id] <= 0) delete this.s.inv[id];
+    return true;
+  }
+
+  // ---------- Hunger and health ----------
+  // Called every frame while you play. Returns 'starved' if you just died.
+  body(dt, busy) {
+    const s = this.s;
+    this.hungerClock += dt * (busy ? 1.5 : 1);
+    if (this.hungerClock >= HUNGER.drain) {
+      this.hungerClock = 0;
+      if (s.hunger > 0) {
+        s.hunger--;
+        if (s.hunger === 3) this.ui.toast('You are hungry! Eat food: pick it in your hotbar and right-click (or press F).', 'bad');
+        if (s.hunger === 0) this.ui.toast('STARVING! Eat now or you will die!', 'bad');
+      }
+    }
+    if (s.hunger === 0) {
+      this.starveClock += dt;
+      if (this.starveClock >= HUNGER.starve) { this.starveClock = 0; if (this.hurt(1)) return 'starved'; }
+    } else if (s.hunger >= 7 && s.health < 10) {
+      this.healClock += dt;
+      if (this.healClock >= HUNGER.heal) { this.healClock = 0; s.health++; }
+    }
+    return null;
+  }
+
+  // Lose hearts. Returns true if that killed you.
+  hurt(n) {
+    this.s.health = Math.max(0, this.s.health - n);
+    sfx.hurt();
+    this.ui.hurtFlash();
+    return this.s.health <= 0;
+  }
+
+  // You died: lose 10% of your money, come back full of health.
+  die() {
+    const lost = Math.floor(this.s.money * 0.1);
+    this.s.money -= lost;
+    this.s.health = 10;
+    this.s.hunger = Math.max(this.s.hunger, 6);
+    this.starveClock = this.hungerClock = 0;
+    return lost;
+  }
+
+  // Eat a food. With no id, eat the smallest food you have.
+  eat(id) {
+    const s = this.s;
+    if (!id) id = [B.APPLE, B.LEMONADE, B.PIZZA_FOOD].find((f) => s.inv[f]);
+    if (!id) { this.ui.toast('No food! Buy some in the SHOP. Leaves drop apples too.', 'bad'); sfx.nope(); return false; }
+    if (s.hunger >= HUNGER.max) { this.ui.toast('You are full!'); return false; }
+    this.take(id);
+    s.hunger = Math.min(HUNGER.max, s.hunger + BLOCKS[id].food);
+    sfx.eat();
+    this.ui.changed();
+    return true;
   }
 
   mineHardness(id) {
@@ -138,11 +209,64 @@ export class Game {
     return true;
   }
 
+  buyFood(i) {
+    const f = FOODS[i];
+    if (f.need !== undefined && !this.s.biz[f.need]) {
+      this.ui.toast(`Buy the ${BUSINESSES[f.need].name} first to sell ${f.name}!`, 'bad');
+      sfx.nope();
+      return false;
+    }
+    if (!this.spend(f.cost)) return false;
+    this.give(f.id, f.count);
+    this.ui.toast(`Got ${f.count} ${f.name}! Pick it in your hotbar and right-click to eat.`, 'good');
+    this.ui.changed();
+    return true;
+  }
+
+  buyBoom(i) {
+    if (!this.s.biz[2]) {
+      this.ui.toast('Buy the Money Factory first. It makes the explosives!', 'bad');
+      sfx.nope();
+      return false;
+    }
+    const p = BOOMS[i];
+    if (!this.spend(p.cost)) return false;
+    for (const [id, n] of p.give) this.give(id, n);
+    this.ui.toast(`Got ${p.name}! Place it, hit it to light it, then RUN!`, 'good');
+    this.ui.changed();
+    return true;
+  }
+
+  // Blow up blocks around x,y,z. Ore turns into money. Returns money made and TNT that should go off next.
+  explode(cx, cy, cz, radius) {
+    const w = this.world, r = this.r;
+    const n = Math.ceil(radius);
+    let cash = 0, jackpot = false;
+    const chain = [];
+    for (let dy = -n; dy <= n; dy++) for (let dz = -n; dz <= n; dz++) for (let dx = -n; dx <= n; dx++) {
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d > radius + (r() - 0.5) * 0.9) continue;
+      const x = cx + dx, y = cy + dy, z = cz + dz;
+      if (!w.inside(x, y, z)) continue;
+      const id = w.data[w.idx(x, y, z)];
+      if (!id || id === B.BEDROCK) continue;
+      const region = w.regionAt(x, y, z);
+      if (isProtected(region)) continue;
+      if ((id === B.TNT || id === B.MEGA_TNT) && (dx || dy || dz)) { chain.push({ x, y, z, id }); continue; }
+      w.set(x, y, z, 0);
+      if (region === R.MINE) this.regrow.push({ i: w.idx(x, y, z), at: this.time + REGROW[0] + r() * (REGROW[1] - REGROW[0]) });
+      if (id === B.MONEY_ORE) { cash += moneyOreValue(this.s.ores); jackpot = true; }
+      else if (isOre(id) && BLOCKS[id].ore < this.s.ores) cash += ORES[BLOCKS[id].ore].value;
+      else if (r() < 0.25 && BLOCKS[id].drop && !isOre(id)) this.give(BLOCKS[id].drop, 1);
+    }
+    return { cash: cash ? this.earn(cash) : 0, jackpot, chain };
+  }
+
   buyPack(i) {
     const p = PACKS[i];
     if (!this.spend(p.cost)) return false;
-    for (const [id, n] of p.give) this.s.inv[id] = (this.s.inv[id] || 0) + n;
-    this.ui.toast(`Got ${p.name}! Right-click to build with them.`, 'good');
+    for (const [id, n] of p.give) this.give(id, n);
+    this.ui.toast(p.icon === B.HOUSE_KIT ? 'Got a House Kit! Pick it, aim at the ground and right-click!' : `Got ${p.name}! Right-click to build with them.`, 'good');
     this.ui.changed();
     return true;
   }
@@ -226,6 +350,8 @@ export class Game {
     for (const k of Object.keys(f)) if (data[k] !== undefined) this.s[k] = data[k];
     this.s.ores = Math.max(1, Math.min(ORES.length, this.s.ores | 0));
     this.s.pick = Math.max(0, Math.min(PICKS.length - 1, this.s.pick | 0));
+    this.s.health = Math.max(1, Math.min(10, this.s.health | 0));
+    this.s.hunger = Math.max(0, Math.min(HUNGER.max, this.s.hunger | 0));
     this.s.biz = BUSINESSES.map((b, k) => Math.max(0, Math.min(b.max, (data.biz && data.biz[k]) | 0)));
     if (Array.isArray(data.edits)) this.world.applyEdits(data.edits);
     this.world.setUnlocked(this.s.ores);

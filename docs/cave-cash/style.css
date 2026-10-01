@@ -156,25 +156,45 @@ html, body {
 }
 #look-label .cash { color: var(--green); }
 
+/* Hotbar, hearts and hunger: like Minecraft. */
 #hotbar {
-  position: absolute; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
-  display: flex; gap: 4px; padding: 5px;
-  background: rgba(27, 13, 46, 0.6);
-  border: 3px solid var(--ink);
-  border-radius: 12px;
+  position: absolute; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 0; padding: 0;
+  background: rgba(30, 30, 30, 0.55);
+  border: 3px solid #1a1a1a;
   pointer-events: auto;
 }
 .slot {
   position: relative; width: 58px; height: 58px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 3px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
+  border: 3px solid #8b8b8b;
+  border-color: #5c5c5c #9a9a9a #9a9a9a #5c5c5c;
+  background: rgba(139, 139, 139, 0.45);
   display: flex; align-items: center; justify-content: center;
 }
-.slot img { width: 44px; height: 44px; image-rendering: pixelated; }
-.slot.on { border-color: var(--gold); background: rgba(255, 210, 31, 0.25); }
-.slot .n { position: absolute; right: 3px; bottom: 0; font-size: 16px; text-shadow: 0 2px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink); }
-.slot.empty { opacity: 0.35; }
+.slot img { width: 40px; height: 40px; image-rendering: pixelated; }
+.slot.on { outline: 4px solid #fff; outline-offset: -2px; z-index: 1; background: rgba(200, 200, 200, 0.5); }
+.slot .n { position: absolute; right: 3px; bottom: 0; font-size: 17px; color: #fff; text-shadow: 2px 2px 0 #3f3f3f; }
+.slot.empty { opacity: 1; }
+#bars {
+  position: absolute; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  width: 528px; display: flex; justify-content: space-between;
+}
+#hearts, #hunger { display: flex; gap: 1px; }
+#hunger { flex-direction: row-reverse; }
+#bars img { width: 24px; height: 24px; image-rendering: pixelated; }
+#hunger.low img { animation: jiggle 0.4s infinite; }
+#hunger.low img:nth-child(2n) { animation-delay: 0.2s; }
+#hearts.low img { animation: jiggle 0.3s infinite; }
+@keyframes jiggle { 50% { transform: translateY(-3px); } }
+#held-name {
+  position: absolute; bottom: calc(112px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  font-size: 20px; white-space: nowrap; text-shadow: 2px 2px 0 #3f3f3f; opacity: 0; transition: opacity 0.3s;
+}
+#held-name.show { opacity: 1; }
+#hurt-flash { position: absolute; inset: 0; background: radial-gradient(circle, transparent 40%, rgba(255, 0, 0, 0.55)); opacity: 0; transition: opacity 0.35s; }
+#hurt-flash.on { opacity: 1; transition: none; }
+.dead-panel { background: #5a0f1c; }
+.dead-panel h2 { color: #fff; font-size: 64px; }
 .hotbar-hint { font-size: 14px; padding: 0 12px; align-self: center; font-family: system-ui, sans-serif; font-weight: 700; letter-spacing: 0; }
 
 #toasts {
@@ -222,7 +242,7 @@ html, body {
   font-size: 22px;
 }
 .btn.x2.owned { background: var(--green); color: #fff; text-shadow: 0 2px 0 var(--ink); cursor: default; }
-.tabs { display: flex; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+.tabs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 10px 0; }
 .tab {
   flex: 1; font: inherit; letter-spacing: inherit; font-size: 17px;
   background: var(--panel2); color: var(--cream);
@@ -273,17 +293,21 @@ html, body {
 #t-mine { right: 130px; bottom: 150px; background: var(--red); width: 100px; height: 100px; }
 #t-build { right: 30px; bottom: 210px; background: var(--blue); }
 #t-jump { right: 30px; bottom: 100px; background: var(--green); }
+#t-eat { left: 200px; bottom: 100px; width: 70px; height: 70px; font-size: 16px; background: var(--gold); color: var(--ink); text-shadow: none; }
 
-body.touch #hotbar { bottom: 8px; }
 body.touch .hotbar-hint { display: none; }
 body.touch #crosshair { opacity: 0.8; }
 
 @media (max-width: 760px), (max-height: 520px) {
   #money { font-size: 34px; }
   #income { font-size: 15px; }
-  .slot { width: 44px; height: 44px; }
-  .slot img { width: 32px; height: 32px; }
+  .slot { width: 40px; height: 40px; border-width: 2px; }
+  .slot img { width: 28px; height: 28px; }
   .slot .n { font-size: 13px; }
+  #bars { width: 360px; bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
+  #bars img { width: 16px; height: 16px; }
+  #held-name { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); font-size: 15px; }
+  #t-eat { left: 150px; bottom: 70px; width: 60px; height: 60px; font-size: 14px; }
   #big-text { font-size: 48px; }
   .toast { font-size: 15px; }
   #toasts { top: 64px; }
@@ -300,6 +324,7 @@ body.touch #crosshair { opacity: 0.8; }
   .card img, .card .ico { width: 42px; height: 42px; }
   #shop-money { font-size: 24px; }
   .tab { font-size: 13px; }
+  .tabs { grid-template-columns: repeat(3, 1fr); }
   #stick { left: 16px; bottom: 70px; width: 120px; height: 120px; }
   #t-mine { right: 110px; bottom: 110px; width: 84px; height: 84px; }
   #t-build { right: 16px; bottom: 170px; width: 72px; height: 72px; font-size: 15px; }

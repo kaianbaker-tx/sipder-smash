@@ -54,9 +54,25 @@ export const PACKS = [
   { name: 'Bricks', give: [[B.BRICK, 16]], cost: 15, icon: B.BRICK },
   { name: 'Glass', give: [[B.GLASS, 16]], cost: 15, icon: B.GLASS },
   { name: 'Color Wool', give: [[B.WHITE, 8], [B.RED, 8], [B.ORANGE, 8], [B.YELLOW, 8], [B.GREEN, 8], [B.BLUE, 8], [B.PINK, 8]], cost: 30, icon: B.RED },
+  { name: 'House Kit', give: [[B.HOUSE_KIT, 1]], cost: 60, icon: B.HOUSE_KIT, about: 'Place it and a whole house pops up!' },
   { name: 'Lamps', give: [[B.LAMP, 8]], cost: 20, icon: B.LAMP },
   { name: 'Gold Blocks', give: [[B.GOLD_BLOCK, 8]], cost: 60, icon: B.GOLD_BLOCK },
   { name: 'Money Blocks', give: [[B.MONEY_BLOCK, 8]], cost: 150, icon: B.MONEY_BLOCK },
+];
+
+// Food fills your hunger bar. Lemonade and pizza come from your own stands.
+// `need` = which business you must own to buy it (0 lemonade stand, 1 pizza shop).
+export const FOODS = [
+  { id: B.APPLE, name: 'Apple', cost: 3, count: 3 },
+  { id: B.LEMONADE, name: 'Lemonade', cost: 6, count: 2, need: 0 },
+  { id: B.PIZZA_FOOD, name: 'Pizza', cost: 12, count: 2, need: 1 },
+];
+export const HUNGER = { max: 10, drain: 45, starve: 4, heal: 3 };  // seconds per step
+
+// Explosives are made in the Money Factory. Light them by hitting them. Then RUN!
+export const BOOMS = [
+  { name: 'TNT', give: [[B.TNT, 3]], cost: 40, icon: B.TNT, about: '3 TNT. Makes a small hole.' },
+  { name: 'MEGA TNT', give: [[B.MEGA_TNT, 1]], cost: 150, icon: B.MEGA_TNT, about: 'One HUGE boom!' },
 ];
 
 export const MILESTONES = [

@@ -23,10 +23,13 @@
   <div id="badges"></div>
   <div id="crosshair"></div>
   <div id="look-label"></div>
+  <div id="held-name"></div>
+  <div id="bars"><div id="hearts"></div><div id="hunger"></div></div>
   <div id="hotbar"></div>
   <div id="toasts"></div>
   <div id="big-text"></div>
   <div id="water-tint"></div>
+  <div id="hurt-flash"></div>
 </div>
 
 <div id="touch" class="hidden">
@@ -34,6 +37,7 @@
   <button id="t-mine" class="tbtn">MINE</button>
   <button id="t-build" class="tbtn">BUILD</button>
   <button id="t-jump" class="tbtn">JUMP</button>
+  <button id="t-eat" class="tbtn">EAT</button>
 </div>
 
 <div id="title" class="screen">
@@ -45,7 +49,7 @@
     <div class="how">
       <div><b>WASD</b> walk &nbsp; <b>SPACE</b> jump &nbsp; <b>SHIFT</b> run</div>
       <div><b>HOLD LEFT CLICK</b> mine &nbsp; <b>RIGHT CLICK</b> build</div>
-      <div><b>B</b> shop &nbsp; <b>1-9</b> or <b>wheel</b> pick a block &nbsp; <b>M</b> music</div>
+      <div><b>B</b> shop &nbsp; <b>1-9</b> or <b>wheel</b> pick a block &nbsp; <b>F</b> eat &nbsp; <b>M</b> music</div>
     </div>
     <p class="tip">Money Ore is where diamonds would be. Dig DEEP in the caves to find it! Your game saves by itself.</p>
     <p id="loading" class="tip">Digging the caves...</p>
@@ -71,7 +75,17 @@
       <div>Mine ore in <b>THE MINE</b> or in the caves. Ore turns into money!</div>
       <div>Buy new materials, faster pickaxes and businesses in the <b>SHOP</b>.</div>
       <div>Every upgrade costs <b>DOUBLE</b> the one before.</div>
+      <div>Keep your <b>hunger bar</b> full: right-click food or press <b>F</b>. If it runs out, you lose hearts!</div>
     </div>
+  </div>
+</div>
+
+<div id="dead" class="screen hidden">
+  <div class="panel dead-panel">
+    <h2>YOU DIED!</h2>
+    <p id="dead-why"></p>
+    <p id="dead-lost"></p>
+    <button id="respawn-btn" class="btn big green">RESPAWN</button>
   </div>
 </div>
 
@@ -98,6 +112,8 @@
       <button class="tab" data-tab="ores">MATERIALS</button>
       <button class="tab" data-tab="picks">PICKAXES</button>
       <button class="tab" data-tab="biz">BUSINESSES</button>
+      <button class="tab" data-tab="food">FOOD</button>
+      <button class="tab" data-tab="boom">BOOM!</button>
       <button class="tab" data-tab="blocks">BLOCKS</button>
     </div>
     <div id="shop-list"></div>

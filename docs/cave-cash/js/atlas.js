@@ -1,5 +1,5 @@
 // Paints all block pictures (16x16 pixels each) into one big texture.
-import { TILE_NAMES, BLOCKS } from './blocks.js';
+import { TILE_NAMES, T, BLOCKS } from './blocks.js';
 import { ORES } from './data.js';
 import { rng } from './noise.js';
 
@@ -150,6 +150,82 @@ export function buildAtlas() {
     blue() { wool([52, 92, 206]); },
     orange() { wool([242, 132, 40]); },
     pink() { wool([246, 142, 190]); },
+    tnt_side() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const band = y >= 5 && y <= 10;
+        px(x, y, band ? [240, 236, 226] : jit(x % 4 === 3 ? [160, 28, 28] : [214, 44, 40], 10));
+      }
+      const T = ['###', '.#.', '.#.', '.#.'], N = ['#.#', '###', '###', '#.#'];
+      [[T, 2], [N, 6], [T, 11]].forEach(([g, ox]) => g.forEach((row, j) => [...row].forEach((ch, i) => ch === '#' && px(ox + i, 6 + j, [24, 20, 24]))));
+    },
+    tnt_top() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const d = Math.hypot(x - 7.5, y - 7.5);
+        px(x, y, d < 2 ? [60, 60, 60] : jit((x + y) % 5 === 0 ? [160, 28, 28] : [214, 44, 40], 10));
+      }
+      px(7, 7, [30, 30, 30]); px(8, 6, [30, 30, 30]); px(9, 5, [255, 200, 60]);
+    },
+    mega_side() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const band = y >= 4 && y <= 11;
+        px(x, y, band ? [255, 214, 40] : jit(x % 4 === 3 ? [90, 20, 150] : [140, 46, 210], 10));
+      }
+      for (const ox of [3, 7, 11]) {
+        for (let j = 5; j <= 8; j++) { px(ox, j, [24, 20, 24]); px(ox + 1, j, [24, 20, 24]); }
+        px(ox, 10, [24, 20, 24]); px(ox + 1, 10, [24, 20, 24]);
+      }
+    },
+    mega_top() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const d = Math.hypot(x - 7.5, y - 7.5);
+        px(x, y, d < 2.5 ? [255, 214, 40] : jit([140, 46, 210], 12));
+      }
+      px(7, 7, [30, 30, 30]); px(8, 6, [30, 30, 30]); px(9, 5, [255, 120, 40]);
+    },
+    house_icon() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const roof = y >= 1 && y <= 7 && Math.abs(x - 7.5) <= y + 0.5;
+        const wall = y >= 8 && y <= 14 && x >= 2 && x <= 13;
+        const door = wall && x >= 6 && x <= 9 && y >= 10;
+        const win = wall && y >= 9 && y <= 11 && (x === 3 || x === 4 || x === 11 || x === 12);
+        if (roof) px(x, y, jit(y % 2 ? [190, 60, 50] : [172, 50, 44], 8));
+        else if (door) px(x, y, [120, 80, 44]);
+        else if (win) px(x, y, [150, 210, 250]);
+        else if (wall) px(x, y, jit([200, 150, 90], 10));
+        else px(x, y, [0, 0, 0], 0);
+      }
+    },
+    apple() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const d = Math.hypot((x - 7.5) * 1.05, (y - 9) * 1.1);
+        if (d < 6) px(x, y, d < 2.2 && x < 7 && y < 8 ? [255, 160, 150] : jit(d > 4.8 ? [160, 20, 30] : [220, 40, 46], 10));
+        else px(x, y, [0, 0, 0], 0);
+      }
+      px(8, 2, [100, 64, 30]); px(8, 3, [100, 64, 30]);
+      px(9, 2, [70, 170, 50]); px(10, 2, [70, 170, 50]); px(10, 1, [70, 170, 50]);
+    },
+    lemonade() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const cup = y >= 4 && y <= 14 && x >= 4 + ((14 - y) >> 3) && x <= 11 - ((14 - y) >> 3);
+        const edge = cup && (x === 4 + ((14 - y) >> 3) || x === 11 - ((14 - y) >> 3) || y === 14);
+        if (edge) px(x, y, [230, 240, 250]);
+        else if (cup) px(x, y, y < 6 ? [255, 250, 220] : jit([255, 226, 60], 8));
+        else px(x, y, [0, 0, 0], 0);
+      }
+      for (let j = 0; j < 5; j++) px(9 + (j >> 1), 4 - j, [255, 80, 120]);
+      px(6, 8, [255, 255, 220]); px(7, 10, [255, 255, 220]);
+    },
+    pizza_slice() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const half = (y - 1) * 0.5;
+        const inside = y >= 1 && y <= 14 && Math.abs(x - 7.5) <= half + 0.5;
+        if (!inside) { px(x, y, [0, 0, 0], 0); continue; }
+        px(x, y, y >= 12 ? jit([206, 142, 72], 12) : jit([252, 208, 84], 12));
+      }
+      for (const [cx, cy] of [[7, 6], [5, 10], [10, 9]]) {
+        px(cx, cy, [190, 40, 40]); px(cx + 1, cy, [190, 40, 40]); px(cx, cy + 1, [170, 30, 30]); px(cx + 1, cy + 1, [190, 40, 40]);
+      }
+    },
     lamp() {
       for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
         const edge = x === 0 || y === 0 || x === 15 || y === 15;
@@ -287,6 +363,7 @@ export function buildAtlas() {
 }
 
 export const avgColor = (id) => avg[id] || [1, 1, 1];
+export const iconOf = (name) => tileIcon(T[name]);
 
 // UV box of a tile: [u0, v0, u1, v1] (v goes up, like the GPU likes).
 export function tileUV(t) {
@@ -295,11 +372,26 @@ export function tileUV(t) {
   return [tx / COLS + e, 1 - (ty + 1) / COLS + e, (tx + 1) / COLS - e, 1 - ty / COLS - e];
 }
 
+// A flat picture of one tile (food, the house kit).
+export function tileIcon(t) {
+  const key = 'tile:' + t;
+  if (iconCache.has(key)) return iconCache.get(key);
+  const c = document.createElement('canvas');
+  c.width = c.height = 48;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.drawImage(canvas, (t % COLS) * TS, ((t / COLS) | 0) * TS, TS, TS, 0, 0, 48, 48);
+  const url = c.toDataURL();
+  iconCache.set(key, url);
+  return url;
+}
+
 // Little 3D block picture for the hotbar and the shop.
 export function blockIcon(id, size = 48) {
   const key = id + ':' + size;
   if (iconCache.has(key)) return iconCache.get(key);
   const b = BLOCKS[id];
+  if (b.flat) return tileIcon(b.tiles[0]);
   const c = document.createElement('canvas');
   c.width = c.height = 48;
   const g = c.getContext('2d');

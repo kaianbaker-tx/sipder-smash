@@ -98,6 +98,26 @@ export function splash() {
   const t = now();
   noise(t, 0.4, 1200, 0.5, 0.35, 'lowpass');
 }
+export function hurt() {
+  const t = now();
+  tone(260, t, 0.16, 'square', 0.14, 120);
+  noise(t, 0.08, 800, 1, 0.2);
+}
+export function eat() {
+  const t = now();
+  for (let i = 0; i < 3; i++) noise(t + i * 0.11, 0.07, 1400 + Math.random() * 800, 1.5, 0.3);
+  tone(520, t + 0.36, 0.12, 'triangle', 0.15, 700);
+}
+export function fuse() {
+  const t = now();
+  noise(t, 2.6, 6000, 0.7, 0.18, 'highpass');
+}
+export function boom(big = false) {
+  const t = now();
+  noise(t, big ? 1.8 : 1.1, big ? 300 : 500, 0.6, 0.9, 'lowpass');
+  noise(t, 0.25, 2000, 0.5, 0.5);
+  tone(big ? 70 : 90, t, big ? 1.2 : 0.7, 'sine', 0.9, 28);
+}
 export function click() {
   tone(880, now(), 0.04, 'square', 0.06);
 }

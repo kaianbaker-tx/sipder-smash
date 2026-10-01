@@ -146,6 +146,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyB' || e.code === 'KeyE') { ui.shopOpen ? closeShop() : openShop(); }
   if (e.code === 'Escape' && ui.shopOpen) closeShop(true);
   if (e.code === 'KeyM') toggleMusic();
+  if (e.code === 'KeyF' && !ui.shopOpen) game.eat();
   if (e.code.startsWith('Digit')) {
     const n = +e.code.slice(5);
     if (n >= 1) ui.pick(n - 1);
@@ -272,6 +273,7 @@ function startGame(n) {
     setTimeout(() => ui.toast('Mine the orange Copper Ore in THE MINE. It turns into money!'), 800);
     setTimeout(() => ui.toast('Then press B to open the SHOP.'), 4200);
     setTimeout(() => ui.toast('Brave? Go down the MONEY CAVE to find Money Ore!'), 8000);
+    setTimeout(() => ui.toast('Watch your hunger bar! Right-click an apple to eat it.'), 12000);
   }
   showGame();
   save();
@@ -356,21 +358,93 @@ let digTimer = 0, buildTimer = 0, warnTimer = 0;
 const eye = new THREE.Vector3(), dir = new THREE.Vector3();
 
 function tryBuild() {
+  const held = ui.selectedBlock();
+  // Holding food? Right-click eats it, like Minecraft.
+  if (held && BLOCKS[held].food) { input.build = false; game.eat(held); return; }
   if (!hit) return;
   const region = world.regionAt(hit.x, hit.y, hit.z);
   if (region === R.SHOP) { input.build = false; openShop('ores'); return; }
-  if (region >= R.LEMON) { input.build = false; openShop('biz'); return; }
+  if (region >= R.LEMON) {
+    // Look inside your stand to buy food, or in the factory to buy explosives.
+    const k = region - R.LEMON, owned = game.s.biz[k] > 0;
+    input.build = false;
+    openShop(!owned ? 'biz' : k === 2 ? 'boom' : 'food');
+    return;
+  }
+  if (held === B.HOUSE_KIT) { input.build = false; placeHouse(); return; }
   const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
   if (!world.inside(x, y, z) || SOLID[world.get(x, y, z)]) return;
   if (isProtected(world.regionAt(x, y, z))) { ui.toast("Can't build here!", 'bad'); return; }
-  const id = ui.selectedBlock();
-  if (!id) { if (warnTimer <= 0) { ui.toast('No blocks yet! Mine some, or buy them in the SHOP.'); warnTimer = 2; } return; }
+  if (!held) { if (warnTimer <= 0) { ui.toast('No blocks yet! Mine some, or buy them in the SHOP.'); warnTimer = 2; } return; }
   if (player.overlapsBlock(x, y, z)) return;
-  world.set(x, y, z, id);
-  game.s.inv[id]--;
-  if (game.s.inv[id] <= 0) delete game.s.inv[id];
+  world.set(x, y, z, held);
+  game.take(held);
   ui.changed();
   sfx.place();
+}
+
+// A whole house in one click! The door faces you.
+function placeHouse() {
+  if (!hit || hit.ny !== 1) { ui.toast('Aim at the ground to place your house!', 'bad'); return; }
+  const fx = Math.abs(Math.sin(player.yaw)) > Math.abs(Math.cos(player.yaw)) ? -Math.sign(Math.sin(player.yaw)) : 0;
+  const fz = fx ? 0 : -Math.sign(Math.cos(player.yaw));
+  const rx = -fz, rz = fx;               // to the right
+  const base = hit.y + 1;
+  let ox = hit.x, oz = hit.z;            // middle of the front wall
+  const cell = (i, j) => [ox + i * rx + j * fx, oz + i * rz + j * fz];
+  // Do not build on top of the player.
+  for (let t = 0; t < 3; t++) {
+    let bad = false;
+    for (let i = -3; i <= 3; i++) for (let j = 0; j <= 6; j++) {
+      const [x, z] = cell(i, j);
+      for (let y = base; y < base + 6; y++) if (player.overlapsBlock(x, y, z)) bad = true;
+    }
+    if (!bad) break;
+    ox += fx; oz += fz;
+  }
+  for (let i = -3; i <= 3; i++) for (let j = 0; j <= 6; j++) {
+    const [x, z] = cell(i, j);
+    for (let y = base - 1; y < base + 7; y++) {
+      if (!world.inside(x, y, z) || isProtected(world.regionAt(x, y, z)) || world.get(x, y, z) === B.BEDROCK) {
+        ui.toast('No room for a house here. Try an open spot!', 'bad');
+        sfx.nope();
+        return;
+      }
+    }
+  }
+  game.take(B.HOUSE_KIT);
+  for (let i = -3; i <= 3; i++) for (let j = 0; j <= 6; j++) {
+    const [x, z] = cell(i, j);
+    const edgeI = Math.abs(i) === 3, edgeJ = j === 0 || j === 6;
+    // Floor, and a stone base down to the ground.
+    world.set(x, base - 1, z, B.PLANKS);
+    for (let y = base - 2, n = 0; n < 6 && y >= 0 && !SOLID[world.get(x, y, z)]; y--, n++) world.set(x, y, z, B.COBBLE);
+    for (let y = base; y < base + 6; y++) world.set(x, y, z, 0);
+    // Walls with windows.
+    if (edgeI || edgeJ) {
+      for (let h = 0; h < 3; h++) {
+        let id = edgeI && edgeJ ? B.LOG : B.PLANKS;
+        if (h === 1 && !(edgeI && edgeJ) && (edgeI ? j === 2 || j === 4 : Math.abs(i) === 2)) id = B.GLASS;
+        world.set(x, base + h, z, id);
+      }
+    }
+    // Roof like a little pyramid.
+    const ring = Math.max(Math.abs(i), Math.abs(j - 3));
+    world.set(x, base + 3, z, B.BRICK);
+    if (ring <= 2) world.set(x, base + 4, z, B.BRICK);
+    if (ring <= 1) world.set(x, base + 5, z, B.BRICK);
+  }
+  // Door, bed and a lamp.
+  const put = (i, j, h, id) => { const [x, z] = cell(i, j); world.set(x, base + h, z, id); };
+  put(0, 0, 0, 0); put(0, 0, 1, 0);
+  put(-2, 5, 0, B.WHITE); put(-2, 4, 0, B.RED); put(-2, 3, 0, B.RED);
+  put(2, 5, 0, B.LAMP);
+  put(2, 1, 0, B.LOG);
+  player.unstick();
+  bits.burst(hit.x, base, hit.z, B.PLANKS, 30);
+  sfx.levelUp();
+  ui.toast('You built a house! Walk in through the door.', 'good');
+  ui.changed();
 }
 
 function breakBlock(h) {
@@ -391,8 +465,92 @@ function breakBlock(h) {
   ui.changed();
 }
 
+// ---------- TNT ----------
+const lit = [];             // TNT that is about to blow up
+const flashGeo = new THREE.BoxGeometry(1.02, 1.02, 1.02);
+let shake = 0;
+
+function lightTNT(x, y, z, fuseTime = 3) {
+  const old = lit.find((t) => t.x === x && t.y === y && t.z === z);
+  if (old) { old.t = Math.min(old.t, fuseTime); return; }
+  const mesh = new THREE.Mesh(flashGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
+  mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+  scene.add(mesh);
+  lit.push({ x, y, z, t: fuseTime, mesh });
+  if (fuseTime > 1) { sfx.fuse(); ui.toast('RUN!!!', 'bad'); }
+}
+
+function updateTNT(dt) {
+  for (let i = lit.length - 1; i >= 0; i--) {
+    const t = lit[i];
+    t.t -= dt;
+    t.mesh.material.opacity = Math.sin(t.t * (t.t < 1 ? 30 : 12)) > 0 ? 0.7 : 0;
+    t.mesh.scale.setScalar(1 + Math.max(0, 0.6 - t.t) * 0.25);
+    if (t.t > 0) continue;
+    lit.splice(i, 1);
+    scene.remove(t.mesh);
+    t.mesh.material.dispose();
+    const id = world.get(t.x, t.y, t.z);
+    if (id === B.TNT || id === B.MEGA_TNT) explodeAt(t.x, t.y, t.z, id);
+  }
+}
+
+function explodeAt(x, y, z, id) {
+  const big = id === B.MEGA_TNT, radius = BLOCKS[id].boom;
+  world.set(x, y, z, 0);
+  const res = game.explode(x, y, z, radius);
+  const fire = [[1, 0.55, 0.1], [1, 0.85, 0.2], [0.35, 0.35, 0.35], [0.9, 0.2, 0.1]];
+  for (let k = 0; k < (big ? 4 : 2); k++) bits.burst(x + (Math.random() - 0.5) * radius, y + (Math.random() - 0.5) * radius, z + (Math.random() - 0.5) * radius, B.STONE, 30, fire);
+  sfx.boom(big);
+  shake = big ? 0.9 : 0.5;
+  if (res.cash) {
+    popups.add('+' + money(res.cash), x + 0.5, y + 1.5, z + 0.5, '#ffd21f', true);
+    if (res.jackpot) { ui.bigText('BOOM JACKPOT!'); sfx.jackpot(); } else sfx.coin(true);
+  }
+  for (const c of res.chain) lightTNT(c.x, c.y, c.z, 0.25 + Math.random() * 0.35);
+  // Too close? Ouch! You get pushed away.
+  const p = player.pos;
+  const dx = p.x - (x + 0.5), dy = p.y + 0.9 - (y + 0.5), dz = p.z - (z + 0.5);
+  const d = Math.hypot(dx, dy, dz);
+  if (d < radius + 2.5 && state === 'play') {
+    const push = (radius + 2.5 - d) * 3;
+    player.vel.x += (dx / (d || 1)) * push;
+    player.vel.z += (dz / (d || 1)) * push;
+    player.vel.y += 4 + push * 0.4;
+    if (game.hurt(Math.ceil((radius + 2.5 - d) * (big ? 1.6 : 1.3)))) died('You got blown up by TNT!');
+  }
+  ui.changed();
+}
+
+// ---------- Dying ----------
+function died(why) {
+  const lost = game.die();
+  state = 'dead';
+  input.mine = input.build = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+  $('dead-why').textContent = why;
+  $('dead-lost').textContent = lost > 0 ? `You dropped ${money(lost)}.` : '';
+  $('dead').classList.remove('hidden');
+  save();
+}
+$('respawn-btn').onclick = () => {
+  sfx.click();
+  $('dead').classList.add('hidden');
+  spawnPlayer();
+  state = 'play';
+  lock();
+  ui.toast('Keep your hunger bar full! Eat food to stay alive.');
+};
+$('t-eat').addEventListener('pointerdown', (e) => { e.preventDefault(); if (state === 'play') game.eat(); });
+
 function updateMining(dt) {
   if (!input.mine || !hit) { mining = null; return; }
+  if (hit.id === B.TNT || hit.id === B.MEGA_TNT) {
+    // Hitting TNT lights it.
+    if (!lit.some((t) => t.x === hit.x && t.y === hit.y && t.z === hit.z)) lightTNT(hit.x, hit.y, hit.z);
+    mining = null;
+    return;
+  }
   if (!mining || mining.x !== hit.x || mining.y !== hit.y || mining.z !== hit.z) mining = { x: hit.x, y: hit.y, z: hit.z, p: 0 };
   const hard = game.mineHardness(hit.id);
   if (hard === Infinity || isProtected(world.regionAt(hit.x, hit.y, hit.z))) {
@@ -446,6 +604,12 @@ function frame(now) {
     const bob = player.onGround ? Math.abs(Math.sin(player.walked * 2.2)) * 0.06 : 0;
     camera.position.set(player.pos.x, player.pos.y + EYE + bob, player.pos.z);
     camera.rotation.set(player.pitch, player.yaw, 0);
+    if (shake > 0) {
+      camera.position.x += (Math.random() - 0.5) * shake;
+      camera.position.y += (Math.random() - 0.5) * shake;
+      camera.position.z += (Math.random() - 0.5) * shake;
+      shake = Math.max(0, shake - dt * 1.5);
+    }
     const fov = input.sprint && active && Math.hypot(player.vel.x, player.vel.z) > 5 ? 82 : 75;
     if (Math.abs(camera.fov - fov) > 0.1) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 8); camera.updateProjectionMatrix(); }
 
@@ -458,6 +622,11 @@ function frame(now) {
         if (input.build) { buildTimer -= dt; if (buildTimer <= 0) { buildTimer = 0.25; tryBuild(); } }
       } else mining = null;
       game.tick(dt, player);
+      updateTNT(dt);
+      if (active) {
+        const busy = input.mine || (input.sprint && Math.hypot(player.vel.x, player.vel.z) > 5);
+        if (game.body(dt, busy) === 'starved') died('You starved! Your hunger bar ran out.');
+      }
       ui.update();
       ui.setLook(hit, world);
     }
@@ -495,4 +664,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // For testing from the browser console.
-window.cave = { world, game, player, ui, input, camera, startGame, openShop, closeShop, breakBlock, get state() { return state; }, get hit() { return hit; } };
+window.cave = { world, game, player, ui, input, camera, startGame, openShop, closeShop, breakBlock, lightTNT, tryBuild, get state() { return state; }, get hit() { return hit; } };
