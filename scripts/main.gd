@@ -22,7 +22,8 @@ var boss: GlitchKing
 var cover: CanvasLayer
 var race: Node3D
 var birds: Node3D
-var dims: Array = [null, null, null]   # built the first time you visit
+var dims := {}                         # dimension number -> Dimension (only the one you are in)
+var dim_i := -1                        # which dimension we are in (-1 = home)
 var dim: Dimension                     # where we are now (null = home city)
 var gate: Gate                         # the open portal, if any
 var _gate_to := -1                     # which dimension it leads to (-1 = home)
@@ -47,12 +48,14 @@ var _last_state := -1
 var _chapter_wait := 0.0
 var _boss_started := false
 var _was_captured := false
+var _last_done := -1
+var _hide_t := 0.0
 
 const START := Vector3(8, 1, 40)
-const DIM_SCRIPTS := ["res://scripts/dim_noir.gd", "res://scripts/dim_candy.gd", "res://scripts/dim_glitch.gd"]
-# each dimension sits far away from the city (and from each other)
-const DIM_POS := [Vector3(4000, 0, 0), Vector3(0, 0, 4000), Vector3(-4000, 0, 0)]
-const DIM_NAMES := ["NOIR-VERSE", "CANDY-VERSE", "GLITCH-VERSE"]
+# The dimensions in story order: Noir, Candy, the fifty verses from
+# verses.gd, and last the Glitch-Verse where the Glitch King lives.
+# Chapter 3 is dimension 0, chapter 4 is dimension 1, and so on.
+const FIRST_DIM_CHAPTER := 3
 
 
 func _ready() -> void:
@@ -123,6 +126,7 @@ func _ready() -> void:
 	title_ui = load("res://scripts/title_ui.gd").new()
 	add_child(title_ui)
 	title_ui.play_pressed.connect(_start_game)
+	title_ui.continue_pressed.connect(_continue_game)
 	title_ui.suit_preview.connect(func(s: String) -> void:
 		player.model.set_skin(load(Game.SUITS[s].tex))
 		look.set_noir(s == "noir"))
@@ -239,6 +243,7 @@ func _to_title() -> void:
 	chapter = 0
 	_dims_visited = 0
 	title_ui.visible = true
+	title_ui.refresh()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_pick_title_spot()
 	player.respawn(_title_spot + Vector3(0, 0.5, 0))
@@ -297,8 +302,17 @@ func _start_game() -> void:
 	_chapter_wait = 9.8
 
 
+## CONTINUE: start a run at the furthest dimension reached before.
+func _continue_game() -> void:
+	var at := clampi(Game.furthest_dim, 0, _final_dim())
+	_start_game()
+	_skip_to(FIRST_DIM_CHAPTER + at)
+	_dims_visited = at
+
+
 func _skip_to(n: int) -> void:
 	hud._captions.clear()
+	hud.set_hint_visible(n <= 1)
 	_chapter_wait = 0.1
 	chapter = n - 1
 
@@ -321,8 +335,9 @@ func _next_chapter() -> void:
 			hud.narrate(["Glitch-Bots are ALL OVER the city!", "Follow the pink arrows. Smash 'em!", "Watch out for SPEEDY bots and MEGA-BOTS!"], 2.6)
 			_spawn_group([["normal", 14], ["speedy", 5], ["big", 3]], null)
 			hud.set_hint_visible(false)
-		3, 4, 5:
-			_enter_dimension(chapter - 3)
+		_:
+			if chapter >= FIRST_DIM_CHAPTER and chapter <= _final_chapter():
+				_enter_dimension(chapter - FIRST_DIM_CHAPTER)
 
 
 func _process(delta: float) -> void:
@@ -359,11 +374,10 @@ func _process(delta: float) -> void:
 		if _chapter_wait <= 0.0:
 			_next_chapter()
 		return
-	match chapter:
-		1:
-			_chapter1()
-		2, 3, 4, 5:
-			_wave_progress()
+	if chapter == 1:
+		_chapter1()
+	elif chapter >= 2 and chapter <= _final_chapter():
+		_wave_progress()
 	if _free_roam:
 		_roam(delta)
 	hud.track = [gate] if gate else objective_bots
@@ -407,6 +421,15 @@ func _wave_progress() -> void:
 			alive.append(b)
 	objective_bots = alive
 	var done := _obj_total - alive.size()
+	# never get stuck: bots that hide too long come out to fight
+	if done != _last_done:
+		_last_done = done
+		_hide_t = 0.0
+	elif not alive.is_empty() and not get_tree().paused:
+		_hide_t += get_process_delta_time()
+		if _hide_t > 40.0:
+			_hide_t = 0.0
+			_call_out(alive)
 	if _obj_total > 0:
 		var where := dim.title if dim else "CITY"
 		hud.set_objective("%s: SMASH THE BOTS  (%d/%d)" % [where, done, _obj_total])
@@ -415,17 +438,17 @@ func _wave_progress() -> void:
 		hud.set_objective("")
 		Sfx.play("cheer")
 		Game.say(["AMAZING!", "SPECTACULAR!", "SPIDER-TASTIC!"][chapter % 3], 2.0)
-		match chapter:
-			1:
-				_chapter_wait = 2.5
-			2, 3, 4:
-				# the bots came from somewhere... follow them!
-				get_tree().create_timer(1.6).timeout.connect(func() -> void:
-					if mode == Mode.PLAY and not _free_roam:
-						_open_gate(chapter - 2))
-			5:
-				hud.narrate(["The ground is shaking...", "HERE COMES THE GLITCH KING!"], 1.8)
-				get_tree().create_timer(3.4).timeout.connect(_start_boss)
+		if chapter == 1:
+			_chapter_wait = 2.5
+		elif chapter == _final_chapter():
+			hud.narrate(["The ground is shaking...", "HERE COMES THE GLITCH KING!"], 1.8)
+			get_tree().create_timer(3.4).timeout.connect(_start_boss)
+		else:
+			# the bots came from somewhere... follow them!
+			var next := chapter - FIRST_DIM_CHAPTER + 1
+			get_tree().create_timer(1.6).timeout.connect(func() -> void:
+				if mode == Mode.PLAY and not _free_roam:
+					_open_gate(next))
 
 
 # ------------------------------------------------------------------ bots
@@ -459,6 +482,18 @@ func _spawn_wave(count: int, big: bool, objective := true, near := Vector3.INF, 
 			objective_bots.append(b)
 	Fx.glitch(0.5)
 	Sfx.play("glitch", 0.1)
+
+
+## The last bots were hiding somewhere hard to reach: bring them to the hero.
+func _call_out(alive: Array) -> void:
+	Game.say("COME OUT, BOTS!", 2.0)
+	Sfx.play("glitch")
+	for i in alive.size():
+		var b := alive[i] as Node3D
+		var a := i * TAU / alive.size()
+		b.global_position = player.center() + Vector3(cos(a) * 14.0, 7.0, sin(a) * 14.0)
+		b.set("home", b.global_position)
+		Fx.word("POP!", b.global_position, "small", Color(1, 0.9, 0.2))
 
 
 ## A big mixed group of objective bots: plan = [["normal", 10], ["speedy", 3], ["big", 2]].
@@ -522,12 +557,58 @@ func _roam(delta: float) -> void:
 
 # ------------------------------------------------------------------ dimensions
 
+func _dim_count() -> int:
+	return Verses.count() + 3
+
+
+func _final_dim() -> int:
+	return _dim_count() - 1
+
+
+func _final_chapter() -> int:
+	return FIRST_DIM_CHAPTER + _final_dim()
+
+
+func _dim_name(i: int) -> String:
+	if i == 0:
+		return "NOIR-VERSE"
+	if i == 1:
+		return "CANDY-VERSE"
+	if i == _final_dim():
+		return "GLITCH-VERSE"
+	return Verses.get_theme(i - 2).name
+
+
+## Each dimension sits far from the city; the verses stand on a big ring.
+func _dim_pos(i: int) -> Vector3:
+	if i == 0:
+		return Vector3(4000, 0, 0)
+	if i == 1:
+		return Vector3(0, 0, 4000)
+	if i == _final_dim():
+		return Vector3(-4000, 0, 0)
+	var a := (i - 2) * TAU / Verses.count() + 0.4
+	return Vector3(cos(a), 0, sin(a)) * 5200.0
+
+
+## Build a dimension (hidden). Only the one you are in is kept, so fifty
+## worlds never have to fit in memory at once.
 func _get_dim(i: int) -> Dimension:
-	if dims[i] == null:
-		var d: Dimension = load(DIM_SCRIPTS[i]).new()
-		d.name = DIM_NAMES[i]
+	if not dims.has(i):
+		var d: Dimension
+		if i == 0:
+			d = load("res://scripts/dim_noir.gd").new()
+		elif i == 1:
+			d = load("res://scripts/dim_candy.gd").new()
+		elif i == _final_dim():
+			d = load("res://scripts/dim_glitch.gd").new()
+		else:
+			var w := DimWorld.new()
+			w.setup(Verses.get_theme(i - 2))
+			d = w
+		d.name = _dim_name(i)
 		add_child(d)
-		d.position = DIM_POS[i]
+		d.position = _dim_pos(i)
 		d.ensure_built()
 		d.visible = false
 		d.process_mode = Node.PROCESS_MODE_DISABLED
@@ -549,10 +630,16 @@ func _travel(d: Dimension) -> void:
 	for n in _home_nodes:
 		(n as Node3D).visible = home
 		(n as Node).process_mode = Node.PROCESS_MODE_INHERIT if home else Node.PROCESS_MODE_DISABLED
-	for other in dims:
-		if other:
-			(other as Dimension).visible = other == d
-			(other as Dimension).process_mode = Node.PROCESS_MODE_INHERIT if other == d else Node.PROCESS_MODE_DISABLED
+	dim_i = -1
+	for k in dims.keys():
+		var other: Dimension = dims[k]
+		if other == d:
+			dim_i = k
+			other.visible = true
+			other.process_mode = Node.PROCESS_MODE_INHERIT
+		else:
+			other.queue_free()
+			dims.erase(k)
 	dim = d
 	player.area = d
 	look.apply_palette(d.palette if d else {})
@@ -571,9 +658,10 @@ func _enter_dimension(i: int) -> void:
 	_travel(d)
 	hud.clear_captions()
 	_dims_visited = maxi(_dims_visited, i + 1)
-	hud.chapter_card("DIMENSION %d" % (i + 1) if i < 2 else "THE FINAL DIMENSION", d.title)
+	Game.save_progress(i)
+	hud.chapter_card("DIMENSION %d OF %d" % [i + 1, _dim_count()] if i < _final_dim() else "THE FINAL DIMENSION", d.title)
 	hud.narrate(d.intro, 2.6)
-	if i == 2 and Game.args.has("boss"):
+	if i == _final_dim() and Game.args.has("boss"):
 		get_tree().create_timer(1.0).timeout.connect(_start_boss)
 		return
 	_spawn_group(d.bot_plan, d)
@@ -583,7 +671,7 @@ func _enter_dimension(i: int) -> void:
 func _open_gate(to: int) -> void:
 	_close_gate()
 	gate = Gate.new()
-	gate.label_text = ("TO THE %s!" % DIM_NAMES[to]) if to >= 0 else "BACK HOME!"
+	gate.label_text = ("TO THE %s!" % _dim_name(to)) if to >= 0 else "BACK HOME!"
 	add_child(gate)
 	var place := _gate_spot()
 	gate.global_position = place
@@ -593,7 +681,12 @@ func _open_gate(to: int) -> void:
 	if not _free_roam:
 		hud.set_objective("JUMP INTO THE PORTAL!")
 		Game.say("A PORTAL OPENED!", 2.0)
-		hud.narrate(["The bots came from ANOTHER DIMENSION!", "Jump into the portal and go after them!"] if to >= 0 else ["Portal home is open!"], 2.4)
+		var lines: Array = [["The bots came from ANOTHER DIMENSION!", "Jump into the portal and go after them!"],
+			["More bots escaped through a portal!", "After them!"],
+			["Another portal! Where does THIS one go?"],
+			["Follow those bots! Jump in!"],
+			["The bots are running away... to the NEXT dimension!"]]
+		hud.narrate((lines[0] if to <= 1 else lines[randi() % lines.size()]) if to >= 0 else ["Portal home is open!"], 2.4)
 	Sfx.play("glitch")
 	Fx.glitch(0.5)
 
@@ -674,7 +767,7 @@ func _on_gate() -> void:
 			rig.yaw = atan2(_title_look.x, _title_look.z)
 			rig.snap()
 			hud.chapter_card("BACK HOME", "THE CITY")
-			_roam_next = (_roam_next + 1) % 3
+			_roam_next = randi() % _dim_count()
 			get_tree().create_timer(2.5).timeout.connect(func() -> void:
 				if _free_roam and not dim:
 					_open_gate(_roam_next))
@@ -683,9 +776,11 @@ func _on_gate() -> void:
 			_travel(d)
 			hud.chapter_card("FREE ROAM", d.title)
 			_roam_t = 1.0
+			# each portal leads on to the next dimension (the last one goes home)
+			var next := to + 1 if to + 1 < _dim_count() else -1
 			get_tree().create_timer(1.5).timeout.connect(func() -> void:
 				if _free_roam and dim == d:
-					_open_gate(-1))
+					_open_gate(next))
 		return
 	_next_chapter()
 
@@ -693,7 +788,7 @@ func _on_gate() -> void:
 # ------------------------------------------------------------------ boss
 
 func _start_boss() -> void:
-	if mode != Mode.PLAY or chapter != 5 or _boss_started or not dim:
+	if mode != Mode.PLAY or chapter != _final_chapter() or _boss_started or not dim:
 		return
 	_boss_started = true
 	var arena := dim.to_global(dim.arena)
