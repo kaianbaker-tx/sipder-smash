@@ -8,6 +8,7 @@ signal _choice(c: Dictionary)
 
 var stage: BattleStage
 var dialog: Dialog
+var hud: HUD
 var rig: CamRig
 var auto := false                 # autoplay: pick moves by itself
 
@@ -73,8 +74,8 @@ func _ready() -> void:
 	my_box.anchor_bottom = 1.0
 	my_box.offset_left = -470
 	my_box.offset_right = -36
-	my_box.offset_top = -370
-	my_box.offset_bottom = -230
+	my_box.offset_top = -350
+	my_box.offset_bottom = -226
 	root.add_child(my_box)
 	var mv := VBoxContainer.new()
 	mv.add_theme_constant_override("separation", 2)
@@ -270,6 +271,8 @@ func run(team: Array, trainer := {}) -> String:
 	# swoop in
 	rig.shot(stage.to_global(Vector3(-7, 4.5, -2)), stage.to_global(BattleStage.FOE_PAD), 0.0)
 	rig.shot(stage.to_global(BattleStage.CAM_POS), stage.to_global(BattleStage.CAM_LOOK), 1.4 if not auto else 0.05)
+	if hud:
+		hud.fade_in(0.35)
 	Sfx.music("rival" if trainer.get("rival", false) else "battle")
 	if wild:
 		foe_model = _model_for(foe(), BattleStage.FOE_PAD, BattleStage.MY_PAD)
@@ -351,6 +354,10 @@ func _buttons(items: Array) -> void:
 func _choose() -> Dictionary:
 	if auto:
 		await _wait(0.1)
+		if me().hp < Dex.max_hp(me()) * 0.35 and Game.bag.get("potion", 0) > 0:
+			return {"kind": "potion"}
+		if wild and foe().hp < Dex.max_hp(foe()) * 0.6 and Game.bag.get("ball", 0) > 0 and not Game.caught.has(foe().sp):
+			return {"kind": "ball"}
 		return {"kind": "move", "move": _best_move(me(), foe(), "me")}
 	while true:
 		_show_menu(true, "What will %s do?" % Dex.mon_name(me()))

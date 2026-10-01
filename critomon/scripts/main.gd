@@ -65,6 +65,7 @@ func _ready() -> void:
 	battle.stage = stage
 	battle.dialog = dialog
 	battle.rig = rig
+	battle.hud = hud
 	add_child(battle)
 	c4 = ConnectFour.new()
 	c4.rig = rig
@@ -128,7 +129,7 @@ func _make_npcs() -> void:
 	_npc({"id": "tim", "title": "YOUNGSTER TIM", "skin": "youngster", "gear": {"cap": Color(1.0, 0.8, 0.2), "cap2": Color(0.2, 0.4, 0.9)}, "kind": "mon", "pos": Vector3(12.5, 0, -68), "yaw": PI / 2, "sight": 9.0,
 		"team": [["zappit", 4]], "intro": "Hey, you look new! Let's battle!", "lose_line": "Aww, I lost! You're really good!",
 		"after": "I'm going to train in the tall grass some more.", "reward": {"potion": 1}})
-	_npc({"id": "mia", "title": "LASS MIA", "skin": "lass", "kind": "mon", "pos": Vector3(-9.5, 0, -90), "yaw": -PI / 2, "sight": 9.0,
+	_npc({"id": "mia", "title": "LASS MIA", "skin": "lass", "kind": "mon", "pos": Vector3(-7.0, 0, -90), "yaw": -PI / 2, "sight": 10.0,
 		"team": [["fluffle", 5], ["buzzlet", 4]], "intro": "Are your Crito Mon cute AND strong? Let's see!", "lose_line": "My cute team lost...",
 		"after": "FLUFFLE loves floating on the wind.", "reward": {"ball": 2}})
 	_npc({"id": "ben", "title": "BUG CATCHER BEN", "skin": "bugcatcher", "gear": {"hat": Color(0.95, 0.85, 0.5), "hat2": Color(0.3, 0.6, 0.3)}, "kind": "mon", "pos": Vector3(-10, 0, -114), "yaw": -PI / 2, "sight": 8.0,
@@ -140,9 +141,9 @@ func _make_npcs() -> void:
 	_npc({"id": "pearl", "title": "NURSE PEARL", "skin": "nurse", "kind": "heal", "pos": Vector3(21.5, 0, -145.5), "yaw": PI / 2,
 		"lines": ["Welcome to CAMP CRITO!"]})
 	_npc({"id": "hank", "title": "HIKER HANK", "skin": "hiker", "gear": {"hat": Color(0.55, 0.38, 0.22), "hat2": Color(0.3, 0.22, 0.15)}, "kind": "mon", "pos": Vector3(-8.5, 0, -160), "yaw": -PI / 2, "sight": 9.0,
-		"team": [["pebblit", 7], ["zappit", 6]], "intro": "Hup hup! Rocks are tough! Want to see?", "lose_line": "Ha ha! You smashed my rocks!",
+		"team": [["pebblit", 6], ["zappit", 6]], "intro": "Hup hup! Rocks are tough! Want to see?", "lose_line": "Ha ha! You smashed my rocks!",
 		"after": "WATER and GRASS moves beat ROCK Crito Mon.", "reward": {"potion": 2}})
-	_npc({"id": "connie", "title": "GRANDMA CONNIE", "skin": "grandma", "gear": {"glasses": true}, "kind": "c4", "c4_level": 3, "pos": Vector3(9.5, 0, -181), "yaw": PI / 2, "sight": 8.0,
+	_npc({"id": "connie", "title": "GRANDMA CONNIE", "skin": "grandma", "gear": {"glasses": true}, "kind": "c4", "c4_level": 3, "pos": Vector3(9.5, 0, -181), "yaw": PI / 2, "sight": 11.0,
 		"intro": "Oh, a young trainer! I've played CONNECT FOUR for 70 years. Let's play, dear!", "lose_line": "My my! You beat Grandma Connie! What a clever kid!",
 		"after": "Always block your friend's three in a row, dear.", "reward": {"potion": 3, "ball": 2}})
 	world.picnic_table(Vector3(12.4, 0, -181), PI / 2)
@@ -206,6 +207,7 @@ func _enter_area(a: String, pos: Vector3, yaw: float) -> void:
 	var indoor := a == "lab"
 	look.set_indoor(indoor)
 	rig.set_indoor(indoor)
+	rig.bounds = AABB(Lab.ORIGIN + Vector3(-Lab.HALF.x + 0.6, 0.5, -Lab.HALF.y + 0.6), Vector3(Lab.HALF.x * 2 - 1.2, 4.0, Lab.HALF.y * 2 - 1.2)) if indoor else AABB()
 	rig.yaw = 0.0
 	rig.snap()
 	Sfx.music("lab" if indoor else ("town" if pos.z > -36.0 else "route"))
@@ -516,7 +518,7 @@ func _rival_arrives() -> void:
 	await dialog.say("Then I'll take %s! Dad said I could have one too." % Dex.SPECIES[mine].name, rival.title)
 	await dialog.say("Now let's see who's smarter... I challenge you to CONNECT FOUR!", rival.title)
 	await dialog.say("Drop your RED discs in the board. Get FOUR IN A ROW before JAX does!")
-	var result := await _connect_four(rival, 1)
+	var result := await _connect_four(rival, 1, Lab.ORIGIN + Vector3(0, 0, 3.6), Vector3(0, 0, 1))
 	match result:
 		"win":
 			await dialog.say("WHAT?! You got four in a row! You're good at this!", rival.title)
@@ -666,7 +668,9 @@ func _blackout() -> void:
 
 
 ## Play Connect Four next to someone. Returns "win", "lose" or "draw".
-func _connect_four(n: NPC, level: int) -> String:
+## spot / facing: put the board somewhere fixed (the lab) instead of
+## next to the two players.
+func _connect_four(n: NPC, level: int, spot := Vector3.INF, facing := Vector3.ZERO) -> String:
 	await hud.fade_out(0.25)
 	var a := player.global_position
 	var b := n.global_position
@@ -681,6 +685,9 @@ func _connect_four(n: NPC, level: int) -> String:
 	q.exclude = [n.body.get_rid()]
 	if not space.intersect_ray(q).is_empty():
 		side = -side
+	if spot != Vector3.INF:
+		mid = spot + facing * 2.2
+		side = -facing
 	var board := ConnectFourBoard.new()
 	add_child(board)
 	board.scale = Vector3.ONE * 0.62
@@ -689,15 +696,15 @@ func _connect_four(n: NPC, level: int) -> String:
 	var front := side * -1.0
 	var right := front.cross(Vector3.UP).normalized() * -1.0
 	var bp := board.global_position
-	player.teleport(bp + front * 1.9 - right * 2.2, 0.0)
+	player.teleport(bp + front * 1.2 - right * 1.9, 0.0)
 	player.face_point(bp)
-	n.global_position = bp + front * 1.9 + right * 2.2
+	n.global_position = bp + front * 1.2 + right * 1.9
 	n.face_point(bp)
 	if player.partner:
-		player.partner.global_position = bp + front * 2.8 - right * 3.2
+		player.partner.global_position = bp + front * 2.2 - right * 2.8
 		player.partner.rotation.y = player.model.rotation.y
-	var center := bp + Vector3(0, 1.3, 0)
-	rig.shot(center + front * 4.8 + Vector3(0, 0.9, 0), center + Vector3(0, -0.1, 0), 0.0)
+	var center := bp + Vector3(0, 1.2, 0)
+	rig.shot(center + front * 5.8 + Vector3(0, 0.7, 0), center + Vector3(0, -0.15, 0), 0.0)
 	await hud.fade_in(0.25)
 	c4.board = board
 	c4.level = level

@@ -87,7 +87,7 @@ func play() -> String:
 			var c: int
 			if auto:
 				await get_tree().create_timer(0.05).timeout
-				c = _ai_move(3 if randf() < 0.8 else 1, 1)
+				c = await _ai_move(3 if randf() < 0.8 else 1, 1)
 			else:
 				c = await _dropped
 			my_turn = false
@@ -99,7 +99,11 @@ func play() -> String:
 			await get_tree().create_timer(0.05 if auto else randf_range(0.5, 0.9)).timeout
 			var depth: int = [1, 1, 3, 5][clampi(level, 0, 3)]
 			var silly: float = [0.0, 0.35, 0.1, 0.0][clampi(level, 0, 3)]
-			var c := _ai_move(depth, 2) if randf() >= silly else _random_move()
+			var c: int
+			if randf() >= silly:
+				c = await _ai_move(depth, 2)
+			else:
+				c = _random_move()
 			await _drop(c, 2)
 		var w := _winner(grid)
 		if w.who != 0:
@@ -206,7 +210,9 @@ func _random_move() -> int:
 	return open[randi() % open.size()]
 
 
-## Look ahead `depth` moves (minimax with alpha-beta) and pick the best column.
+## Look ahead `depth` moves (minimax with alpha-beta) and pick the best
+## column. Each first move is thought about on its own frame, so the game
+## never freezes while the computer thinks (web builds have no threads).
 func _ai_move(depth: int, me: int) -> int:
 	var g := grid.duplicate()
 	var order := [3, 2, 4, 1, 5, 0, 6]
@@ -222,6 +228,8 @@ func _ai_move(depth: int, me: int) -> int:
 		if s > best_score:
 			best_score = s
 			best = c
+		if depth >= 3:
+			await get_tree().process_frame
 	return best if best >= 0 else _random_move()
 
 

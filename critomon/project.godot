@@ -14,6 +14,11 @@ config/name="Crito Mon"
 config/description="Pick your first Crito Mon, battle trainers and play Connect Four!"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0.29, 0.55, 0.94, 1)
+boot_splash/image="res://assets/ui/splash.png"
+boot_splash/fullsize=true
+boot_splash/use_filter=true
+config/icon="res://assets/ui/icon.png"
 
 [autoload]
 
@@ -46,3 +51,4 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/msaa_3d=1
+environment/defaults/default_clear_color=Color(0.72, 0.9, 1, 1)

@@ -66,7 +66,7 @@ func _room() -> void:
 	var pm := PlaneMesh.new()
 	pm.size = Vector2(w * 2, d * 2)
 	floor.mesh = pm
-	floor.material_override = Toon.material(_checker(Color(0.95, 0.93, 0.86), Color(0.72, 0.84, 0.95)), {"uv_scale": Vector2(w, d) / 1.5, "rim": 0.0})
+	floor.material_override = Toon.material(_checker(Color(0.93, 0.88, 0.76), Color(0.62, 0.78, 0.94)), {"uv_scale": Vector2(w, d) / 1.5, "rim": 0.0})
 	add_child(floor)
 	var cs := CollisionShape3D.new()
 	cs.shape = WorldBoundaryShape3D.new()

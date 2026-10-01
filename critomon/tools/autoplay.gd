@@ -4,6 +4,8 @@ extends Node
 ##   tools/show.sh res://scenes/main.tscn -- --autoplay --shots=/tmp/ap
 ##   --start=route   skip the lab (get EMBERPUP and go straight to Route 1)
 ##   --until=lab     stop after the lab scene
+##   --start=title   just take a picture of the title screen
+##   --start=menu    pictures of the pause menu pages
 
 var main: Node
 var shots := ""
@@ -78,9 +80,37 @@ func idle() -> void:
 func _run() -> void:
 	await get_tree().process_frame
 	var start: String = Game.args.get("start", "")
+	if start == "title":
+		main.title.show_title()
+		await _wait(4.0)
+		shot("title")
+		get_tree().quit(0)
+		return
 	await main.begin(true)
 	await idle()
 	shot("start")
+	if start == "menu":
+		Game.set_flag("starter", "bubbloo")
+		Game.add_mon(Dex.make("bubbloo", 7))
+		Game.add_mon(Dex.make("zappit", 5))
+		Game.give("potion", 2)
+		Game.caught["zappit"] = true
+		Game.seen["pebblit"] = true
+		main.apply_story()
+		main.menu.open()
+		await _wait(0.5)
+		shot("menu")
+		main.menu._team()
+		await _wait(0.5)
+		shot("team")
+		main.menu._dex()
+		await _wait(0.5)
+		shot("dex")
+		main.menu._help()
+		await _wait(0.5)
+		shot("help")
+		get_tree().quit(0)
+		return
 	if start == "route":
 		Game.set_flag("met_prof")
 		Game.set_flag("starter", "emberpup")
@@ -115,13 +145,27 @@ func _run() -> void:
 	# up Route 1, through tall grass, past the trainers
 	var path := [Vector3(0, 0, -40), Vector3(-8, 0, -52), Vector3(-15, 0, -60), Vector3(-6, 0, -62), Vector3(8, 0, -62),
 		Vector3(8, 0, -80), Vector3(-4, 0, -98), Vector3(-12, 0, -104), Vector3(-4, 0, -110), Vector3(-4, 0, -120),
-		Vector3(6, 0, -134), Vector3(6, 0, -146), Vector3(12, 0, -146), Vector3(19, 0, -144), Vector3(6, 0, -146),
+		Vector3(6, 0, -134), Vector3(6, 0, -146), Vector3(12, 0, -146), Vector3(12.5, 0, -140.5), Vector3(6, 0, -146),
 		Vector3(6, 0, -156), Vector3(-2, 0, -172), Vector3(0, 0, -190), Vector3(0, 0, -202)]
-	for p in path:
-		await walk(p)
-		print("AUTOPLAY: at ", p, " party ", _party_text(), " beaten ", _beaten())
-		if not Game.can_battle():
+	var i := 0
+	var tries := 0
+	while i < path.size():
+		await walk(path[i])
+		await idle()
+		if main.area == "lab":
+			# lost a battle and woke up in the lab: walk out and start again
+			tries += 1
+			print("AUTOPLAY: blacked out (", tries, ") party ", _party_text())
+			if tries > 3:
+				break
+			await walk(Lab.ORIGIN + Lab.EXIT)
 			await idle()
+			await walk(Vector3(4, 0, -12))
+			await walk(Vector3(0, 0, -36))
+			i = 0
+			continue
+		print("AUTOPLAY: at ", path[i], " party ", _party_text(), " beaten ", _beaten())
+		i += 1
 	await idle()
 	await _wait(1.0)
 	shot("end")

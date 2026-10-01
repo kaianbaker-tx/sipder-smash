@@ -52,6 +52,20 @@ def recolor_hair(im, col):
         px[x, y] = (min(255, int(col[0] * k)), min(255, int(col[1] * k)), min(255, int(col[2] * k)), a)
 
 
+def friendly_face(im, brow=(70, 45, 30)):
+    """The criminalMaleA face frowns and has a scar: paint skin over the
+    eyebrows and the scar, then draw raised eyebrows and a smile."""
+    px = im.load()
+    skin = px[290, 240]
+    d = ImageDraw.Draw(im)
+    for box in [(260, 188, 314, 211), (298, 211, 314, 220), (326, 182, 386, 209), (328, 209, 347, 218)]:
+        d.rectangle(box, fill=skin)
+    d.line([(375, 219), (354, 260)], fill=skin, width=11)
+    for cx in (287, 357):
+        d.arc((cx - 17, 194, cx + 17, 212), 200, 340, fill=brow + (255,), width=6)
+    d.arc((306, 266, 340, 284), 20, 160, fill=(70, 30, 30, 255), width=4)
+
+
 def fill(im, box, col, shade=0.12):
     """Flat fill with a soft top-to-bottom shade."""
     d = ImageDraw.Draw(im)
@@ -149,6 +163,7 @@ def main():
     save(im, "rival")
     # Professor Birch: white lab coat over a teal shirt
     im = outfit("criminalMaleA", (245, 245, 248), (180, 150, 110), sleeves=(240, 240, 245), shoe=(120, 80, 50), hair=(110, 70, 40))
+    friendly_face(im, (85, 52, 30))
     stripe(im, (290, 768, 350, 1024), (40, 150, 160))
     stripe(im, (180, 880, 250, 890), (200, 200, 205))
     save(im, "prof")
@@ -171,6 +186,7 @@ def main():
     save(im, "bugcatcher")
     # hiker: brown shirt, olive pants
     im = outfit("criminalMaleA", (170, 110, 60), (110, 120, 70), shoe=(90, 60, 40), hair=(70, 45, 30))
+    friendly_face(im, (55, 35, 25))
     save(im, "hiker")
     # Connect Four kid: red and yellow checks
     im = outfit("skaterFemaleA", (230, 50, 50), (40, 70, 200), shoe=(250, 210, 40), hair=(90, 50, 160))

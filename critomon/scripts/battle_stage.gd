@@ -4,12 +4,12 @@ extends Builder
 ## battle pads. Your Crito Mon stands on the near pad, the other one far.
 
 const ORIGIN := Vector3(0, 0, 560)
-const MY_PAD := Vector3(-1.7, 0.45, 3.6)
-const FOE_PAD := Vector3(1.9, 0.45, -4.2)
-const MY_TRAINER := Vector3(-3.4, 0.0, 6.6)
-const FOE_TRAINER := Vector3(4.3, 0.0, -7.2)
-const CAM_POS := Vector3(1.6, 2.7, 11.0)
-const CAM_LOOK := Vector3(0.2, 1.1, -1.2)
+const MY_PAD := Vector3(-1.9, 0.45, 2.4)
+const FOE_PAD := Vector3(2.0, 0.45, -3.0)
+const MY_TRAINER := Vector3(-3.6, 0.0, 5.0)
+const FOE_TRAINER := Vector3(3.9, 0.0, -5.6)
+const CAM_POS := Vector3(0.0, 2.0, 7.0)
+const CAM_LOOK := Vector3(0.8, 0.6, -1.5)
 
 
 func build() -> void:

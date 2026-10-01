@@ -12,6 +12,7 @@ var pitch := -0.62
 var dist := 9.5
 var height := 1.3
 var indoor := false
+var bounds := AABB()             # indoors: the camera stays inside this box
 var locked := false              # a cutscene shot is showing
 var _shot_tw: Tween
 var _dragging := false
@@ -36,8 +37,8 @@ func right() -> Vector3:
 
 func set_indoor(on: bool) -> void:
 	indoor = on
-	dist = 8.0 if on else 9.5
-	pitch = -0.78 if on else -0.62
+	dist = 6.5 if on else 9.5
+	pitch = -0.66 if on else -0.62
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -76,6 +77,8 @@ func _process(delta: float) -> void:
 	var hit := space.intersect_ray(q)
 	if hit and not indoor:
 		want = focus + (want - focus).normalized() * maxf(1.5, focus.distance_to(hit.position) - 0.4)
+	if indoor and bounds.size != Vector3.ZERO:
+		want = want.clamp(bounds.position, bounds.end)
 	global_position = global_position.lerp(focus, 1.0 - exp(-delta * 10.0))
 	cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-delta * 10.0))
 	cam.look_at(global_position, Vector3.UP)
@@ -88,6 +91,8 @@ func snap() -> void:
 	var focus := target.global_position + Vector3(0, height, 0)
 	global_position = focus
 	cam.global_position = focus + Vector3(0, 0, dist).rotated(Vector3.RIGHT, pitch).rotated(Vector3.UP, yaw)
+	if indoor and bounds.size != Vector3.ZERO:
+		cam.global_position = cam.global_position.clamp(bounds.position, bounds.end)
 	cam.look_at(focus, Vector3.UP)
 
 
