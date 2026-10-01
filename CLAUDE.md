@@ -32,3 +32,20 @@ what he meant. Short sentences, one idea at a time.
   `tools/gen_ui.py` and `tools/gen_audio.py`. Edit those, then re-run them.
 - `tools/check.sh` checks every script. `tools/autoplay.gd` plays the game
   by itself for testing: `godot res://scenes/main.tscn -- --autoplay=auto --chapter=2`.
+
+## Crito Mon (second game, in `critomon/`)
+
+A Pokemon-style 3D game. It is its own Godot project: run Godot inside
+`critomon/`. Web build goes to `docs/critomon/`.
+
+- `scripts/main.gd` runs the story: title, Prof. Birch's lab, picking a
+  starter, the rival's Connect Four, Route 1, the Arena.
+- `scripts/world.gd` builds the town and Route 1 in code. `lab.gd` is the
+  inside of the lab. `battle_stage.gd` is where battles happen.
+- `scripts/dex.gd` has every Crito Mon, move and type. `critter_model.gd`
+  builds the Crito Mon out of round shapes.
+- `scripts/battle.gd` is Crito Mon battles. `connect4.gd` is Connect Four.
+- Trainers are listed in `_make_npcs()` in `main.gd`.
+- Outfits, logo and sounds: `tools/gen_skins.py`, `tools/gen_ui.py`,
+  `tools/gen_audio.py`. `tools/check.sh` checks every script.
+- Test it by itself: `godot res://scenes/main.tscn -- --autoplay --start=route`.
