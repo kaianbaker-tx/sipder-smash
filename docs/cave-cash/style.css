@@ -139,6 +139,8 @@ html, body {
   font-size: 15px;
 }
 .badge.x2 { background: var(--gold); color: var(--ink); }
+.badge.day { background: #8fd0ff; color: var(--ink); }
+.badge.night { background: #1a1f4a; color: #b9ffb0; animation: jiggle 1s infinite; }
 
 #crosshair {
   position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px;

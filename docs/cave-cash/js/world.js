@@ -14,7 +14,7 @@ const LAMP_R = 6;                       // how far a lamp shines
 const SX = W / CS, SY = H / CS, SZ = D / CS;
 
 // Regions: what part of town a block belongs to.
-export const R = { NONE: 0, MINE: 1, SHOP: 2, LEMON: 10, PIZZA: 11, FACTORY: 12 };
+export const R = { NONE: 0, MINE: 1, SHOP: 2, TOWN: 3, LEMON: 10, PIZZA: 11, FACTORY: 12 };
 export const isProtected = (r) => r >= 2;
 
 // Faces: normal, 4 corners (bottom-left, bottom-right, top-right, top-left), brightness, tile slot.
@@ -290,7 +290,7 @@ export class World {
   buildSection(s, material) {
     const sx = s % SX, sz = ((s / SX) | 0) % SZ, sy = (s / (SX * SZ)) | 0;
     const x0 = sx * CS, y0 = sy * CS, z0 = sz * CS;
-    const pos = [], col = [], uv = [], ind = [];
+    const pos = [], col = [], uv = [], ind = [], lit = [];
     const data = this.data, vis = this.visual, top = this.top, glow = this.glow;
     const g = (x, y, z) => this.get(x, y, z);
     const occ = (x, y, z) => (OPAQUE[g(x, y, z)] || g(x, y, z) === B.LEAVES ? 1 : 0);
@@ -305,13 +305,14 @@ export class World {
         const nid = g(nx, ny, nz);
         if (OPAQUE[nid]) continue;
         if (nid === id && id === B.GLASS) continue;
-        // Covered from the sky? Then it is in shadow.
-        let light = 1;
-        if (nx >= 0 && nz >= 0 && nx < W && nz < D && ny < top[nx + W * nz]) {
-          light = 0.55;
-          if (ny < H) light = Math.min(1, light + glow[nx + W * (nz + D * ny)] / 400);
+        // Two kinds of light, like Minecraft: sky light (changes with day and night) and lamp light.
+        let open = 1, lamp = 0;
+        if (nx >= 0 && nz >= 0 && nx < W && nz < D && ny < H) {
+          if (ny < top[nx + W * nz]) open = 0;
+          lamp = Math.min(1, (glow[nx + W * (nz + D * ny)] / 255) * 1.3);
         }
-        if (GLOW[id]) light = 1.25;
+        const bright = GLOW[id] === 1;
+        if (bright) { open = 1; lamp = 1; }
         const uvb = tileUV(bd.tiles[F.t]);
         const ao = F.tmp;
         for (let k = 0; k < 4; k++) {
@@ -321,8 +322,9 @@ export class World {
           const s3 = occ(nx + o[6], ny + o[7], nz + o[8]);
           ao[k] = s1 && s2 ? 0 : 3 - (s1 + s2 + s3);
           pos.push(x + c[0], y + c[1], z + c[2]);
-          const br = light > 1 ? 1 : F.s * AO[ao[k]] * light;
+          const br = bright ? 1 : F.s * AO[ao[k]];
           col.push(br, br, br);
+          lit.push(open, lamp);
           uv.push(uvb[UVC[k][0]], uvb[UVC[k][1]]);
         }
         if (ao[0] + ao[2] < ao[1] + ao[3]) ind.push(vc + 1, vc + 2, vc + 3, vc + 3, vc, vc + 1);
@@ -341,6 +343,7 @@ export class World {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    geo.setAttribute('lit', new THREE.Float32BufferAttribute(lit, 2));
     geo.setIndex(vc > 65535 ? new THREE.Uint32BufferAttribute(ind, 1) : new THREE.Uint16BufferAttribute(ind, 1));
     geo.computeBoundingSphere();
     const mesh = new THREE.Mesh(geo, material);

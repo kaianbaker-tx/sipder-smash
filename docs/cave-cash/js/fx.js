@@ -266,8 +266,17 @@ export class Hand {
     this.t = 0;
   }
   setColor(hex) {
-    this.headMat.color.set(hex);
-    this.tipMat.color.set(hex).lerp(new THREE.Color(0xffffff), 0.45);
+    this.headBase = new THREE.Color(hex);
+    this.tipBase = new THREE.Color(hex).lerp(new THREE.Color(0xffffff), 0.45);
+    this.light(this.lit || 1);
+  }
+  // Darker at night.
+  light(k) {
+    this.lit = k;
+    if (!this.headBase) return;
+    this.headMat.color.copy(this.headBase).multiplyScalar(k);
+    this.tipMat.color.copy(this.tipBase).multiplyScalar(k);
+    this.handle.material.color.setHex(0x8a5a2b).multiplyScalar(k);
   }
   update(dt, mining, walked, aspect) {
     this.camera.aspect = aspect;
@@ -299,11 +308,6 @@ export function makeSky(scene) {
   const sky = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
   sky.renderOrder = -10;
   scene.add(sky);
-  // A square sun, like the blocky games.
-  const sun = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshBasicMaterial({ color: 0xfff3a0, fog: false, depthWrite: false }));
-  sun.position.set(150, 260, -200);
-  sun.lookAt(0, 0, 0);
-  sky.add(sun);
   return sky;
 }
 

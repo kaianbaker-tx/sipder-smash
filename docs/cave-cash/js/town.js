@@ -89,6 +89,13 @@ export function buildTown(world, r) {
   path(81, 68, 83, 69);
   path(63, 68, 65, 71);
 
+  // Lamp posts keep the town safe from zombies at night.
+  for (const [x, z] of [[60, 58], [68, 58], [60, 66], [68, 66], [62, 52], [66, 52], [74, 61], [52, 65], [76, 65], [44, 65], [84, 65], [50, 56], [56, 61]]) {
+    for (let y = GROUND + 1; y <= GROUND + 3; y++) { world.data[world.idx(x, y, z)] = B.LOG; world.region[world.idx(x, y, z)] = R.TOWN; }
+    world.data[world.idx(x, GROUND + 4, z)] = B.LAMP;
+    world.region[world.idx(x, GROUND + 4, z)] = R.TOWN;
+  }
+
   // The shop: a wooden house with a money counter.
   const s = SHOP, sx1 = s.x0 + s.w - 1, sz1 = s.z0 + s.d - 1;
   box(world, s.x0, GROUND, s.z0, sx1, GROUND + 7, sz1, 0, R.SHOP);

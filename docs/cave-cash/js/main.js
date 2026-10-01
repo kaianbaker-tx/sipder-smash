@@ -2,13 +2,15 @@
 import * as THREE from '../lib/three.min.js';
 import { buildAtlas } from './atlas.js';
 import { B, BLOCKS, SOLID } from './blocks.js';
-import { BUSINESSES, PICKS, bizCost, bizIncome, money } from './data.js';
+import { ORES, BUSINESSES, PICKS, bizCost, bizIncome, money } from './data.js';
 import { World, W, D, SEA, GROUND, isProtected, R } from './world.js';
 import { buildTown, buildCave, buildBusiness, SPAWN, MINE, SHOP, CAVE, PLOTS, plotSignPos, chimneys } from './town.js';
 import { Player, EYE } from './player.js';
 import { Game } from './game.js';
 import { UI } from './ui.js';
 import { Bits, Popups, Sign, Target, Hand, makeSky, makeClouds, makeWater } from './fx.js';
+import { DayNight } from './daynight.js';
+import { Zombies } from './zombies.js';
 import { setupTouch } from './touch.js';
 import { rng } from './noise.js';
 import * as sfx from './sound.js';
@@ -62,11 +64,14 @@ const player = new Player(world);
 
 const sky = makeSky(scene);
 const clouds = makeClouds(scene);
-makeWater(scene, SEA, world, W, D);
+const water = makeWater(scene, SEA, world, W, D);
+const dayNight = new DayNight(scene, sky, clouds, water, blockMat);
 const bits = new Bits(scene);
 const popups = new Popups(scene);
 const target = new Target(scene, atlasTex);
 const hand = new Hand();
+const zombies = new Zombies(world, scene, bits, sfx);
+let wasNight = false;
 
 // Signs.
 new Sign(scene, (MINE.x0 + MINE.x1) / 2, GROUND + 7, MINE.z0 + 1, ['THE MINE', 'Ore grows back!'], { height: 1.8 });
@@ -226,6 +231,7 @@ function askConfirm(title, text, action) {
 
 // Put the world back the way it was made, with nothing bought.
 function resetWorld() {
+  zombies.clear();
   game.s = Game.fresh();
   game.regrow = [];
   world.resetToBase();
@@ -261,6 +267,7 @@ function startGame(n) {
   worldUsed = true;
   spawnPlayer();
   const data = Game.loadData(n);
+  zombies.clear();
   if (data) {
     const made = game.restore(data);
     if (data.pos) {
@@ -275,6 +282,7 @@ function startGame(n) {
     setTimeout(() => ui.toast('Brave? Go down the MONEY CAVE to find Money Ore!'), 8000);
     setTimeout(() => ui.toast('Watch your hunger bar! Right-click an apple to eat it.'), 12000);
   }
+  wasNight = game.night;
   showGame();
   save();
 }
@@ -543,6 +551,43 @@ $('respawn-btn').onclick = () => {
 };
 $('t-eat').addEventListener('pointerdown', (e) => { e.preventDefault(); if (state === 'play') game.eat(); });
 
+// ---------- Fighting zombies ----------
+let attackCool = 0;
+let zombieHit = null;
+function zombieMoney() { return Math.max(10, ORES[game.s.ores - 1].value * 3); }
+
+function updateFight(dt) {
+  attackCool -= dt;
+  zombieHit = zombies.hitTest(eye, dir, 4);
+  if (zombieHit && hit && hit.t < zombieHit.t) zombieHit = null;
+  if (!zombieHit || !input.mine) return !!zombieHit;
+  mining = null;
+  if (attackCool > 0) return true;
+  attackCool = 0.4;
+  hand.swing = 0.25;
+  const z = zombieHit.zombie;
+  if (zombies.damage(z, 3 + game.s.pick * 1.2, dir)) {
+    const p = z.body.pos;
+    const cash = game.earn(zombieMoney());
+    game.s.kills++;
+    popups.add('+' + money(cash), p.x, p.y + 2.2, p.z, '#ffd21f', true);
+    sfx.coin(true);
+    if (Math.random() < 0.35) { game.give(B.APPLE, 1); ui.toast('The zombie dropped an apple!'); }
+    ui.changed();
+  }
+  return true;
+}
+
+function zombieHitsPlayer(dmg, z) {
+  if (state !== 'play' || ui.shopOpen) return;
+  const zp = z.body.pos, p = player.pos;
+  const dx = p.x - zp.x, dz = p.z - zp.z, d = Math.hypot(dx, dz) || 1;
+  player.vel.x += (dx / d) * 6;
+  player.vel.z += (dz / d) * 6;
+  player.vel.y = Math.max(player.vel.y, 4);
+  if (game.hurt(dmg)) died('A zombie got you! Stay near lamps at night.');
+}
+
 function updateMining(dt) {
   if (!input.mine || !hit) { mining = null; return; }
   if (hit.id === B.TNT || hit.id === B.MEGA_TNT) {
@@ -618,7 +663,7 @@ function frame(now) {
       eye.copy(camera.position);
       hit = active ? world.raycast(eye, dir, REACH) : null;
       if (active) {
-        updateMining(dt);
+        if (!updateFight(dt)) updateMining(dt);
         if (input.build) { buildTimer -= dt; if (buildTimer <= 0) { buildTimer = 0.25; tryBuild(); } }
       } else mining = null;
       game.tick(dt, player);
@@ -627,15 +672,29 @@ function frame(now) {
         const busy = input.mine || (input.sprint && Math.hypot(player.vel.x, player.vel.z) > 5);
         if (game.body(dt, busy) === 'starved') died('You starved! Your hunger bar ran out.');
       }
+      // Night: zombies come out.
+      const night = game.night;
+      if (night && !wasNight) {
+        game.s.nights++;
+        ui.bigText('NIGHT ' + game.s.nights);
+        ui.toast('Night is here! ZOMBIES come out. Stay near lamps, or hit them with your pickaxe!', 'bad');
+      } else if (!night && wasNight) {
+        ui.toast('The sun is up! The zombies are burning!', 'good');
+      } else if (!night && game.dayTime > 0.55 && game.dayTime < 0.553) {
+        ui.toast('The sun is going down... get ready for zombies!');
+      }
+      wasNight = night;
+      if (active) zombies.update(dt, { player, night, level: dayNight.level, max: 3 + Math.min(5, game.s.nights), hitPlayer: zombieHitsPlayer });
       ui.update();
-      ui.setLook(hit, world);
+      if (zombieHit) $('look-label').innerHTML = `Zombie &nbsp;<span class="cash">${'&#9829;'.repeat(Math.max(1, Math.ceil(zombieHit.zombie.hp / 2)))} +${money(zombieMoney() * game.mult)}</span>`;
+      else ui.setLook(hit, world);
     }
     target.show(hit, mining ? mining.p : 0);
 
     // Under water?
     const under = camera.position.y < SEA - 0.1 && player.inWater;
     $('water-tint').classList.toggle('on', under);
-    scene.fog.color.copy(under ? WATER_FOG : SKY_FOG);
+    if (under) scene.fog.color.copy(WATER_FOG);
     scene.fog.near = under ? 2 : 40;
     scene.fog.far = under ? 28 : 120;
 
@@ -647,6 +706,9 @@ function frame(now) {
     }
   }
 
+  dayNight.update(game.dayTime);
+  hand.light(Math.max(0.45, dayNight.level));
+  if (!$('water-tint').classList.contains('on')) scene.fog.color.copy(dayNight.fog);
   world.remesh(blockMat, 7);
   bits.update(dt, world);
   popups.update(dt);
@@ -664,4 +726,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // For testing from the browser console.
-window.cave = { world, game, player, ui, input, camera, startGame, openShop, closeShop, breakBlock, lightTNT, tryBuild, get state() { return state; }, get hit() { return hit; } };
+window.cave = { world, game, player, ui, input, camera, zombies, dayNight, startGame, openShop, closeShop, breakBlock, lightTNT, tryBuild, get state() { return state; }, get hit() { return hit; } };

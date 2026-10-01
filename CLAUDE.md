@@ -35,6 +35,9 @@ what he meant. Short sentences, one idea at a time.
   Once merged to main it is live at `/cave-cash/` on the Pages site.
 - Prices are in `js/data.js`. The Mine, Shop, Money Cave and the 3
   businesses are built in `js/town.js`. The land is made in `js/world.js`.
+- Like Minecraft: hearts, hunger and food (`js/game.js`), day and night
+  (`js/daynight.js`), zombies at night (`js/zombies.js`), TNT, house kits.
+  Zombies stay out of town and away from lamps.
 - Test: run `python3 -m http.server` in `docs/`, open `/cave-cash/`.
   `window.cave` gives the game to test scripts.
 - Games save in the browser: 3 save files, picked on the title screen.

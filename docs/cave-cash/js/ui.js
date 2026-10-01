@@ -100,11 +100,13 @@ export class UI {
       if (this.shopOpen) this.refreshPrices();
     }
     const inc = g.income();
-    const key = inc + ':' + s.pick + ':' + s.x2;
+    const night = g.night;
+    const key = inc + ':' + s.pick + ':' + s.x2 + ':' + night + ':' + s.nights;
     if (key !== this.lastIncome) {
       $('income').textContent = inc > 0 ? `+${money(inc)} every second` : '';
       this.lastIncome = key;
-      $('badges').innerHTML = `<div class="badge">${PICKS[s.pick].name}</div>` + (s.x2 ? '<div class="badge x2">2X MONEY</div>' : '');
+      $('badges').innerHTML = (night ? `<div class="badge night">NIGHT ${s.nights} &middot; ZOMBIES!</div>` : `<div class="badge day">DAY ${s.nights + 1}</div>`) +
+        `<div class="badge">${PICKS[s.pick].name}</div>` + (s.x2 ? '<div class="badge x2">2X MONEY</div>' : '');
     }
     this.renderHotbar();
     this.renderBars();

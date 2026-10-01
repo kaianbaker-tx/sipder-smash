@@ -2,6 +2,7 @@
 import { ORES, PICKS, BUSINESSES, PACKS, FOODS, BOOMS, HUNGER, MILESTONES, DOUBLE_MONEY_COST, bizCost, bizIncome, moneyOreValue, money } from './data.js';
 import { B, BLOCKS, isOre } from './blocks.js';
 import { isProtected, R } from './world.js';
+import { CYCLE, isNight } from './daynight.js';
 import { mineRoll, buildBusiness, PLOTS } from './town.js';
 import { rng } from './noise.js';
 import * as sfx from './sound.js';
@@ -30,10 +31,14 @@ export class Game {
     return {
       money: 0, earned: 0, ores: 1, pick: 0, biz: [0, 0, 0], x2: false, milestone: 0, played: 0,
       inv: { [B.APPLE]: 3 }, hunger: HUNGER.max, health: 10,
+      clock: 0.05 * CYCLE, nights: 0, kills: 0,
     };
   }
 
   get mult() { return this.s.x2 ? 2 : 1; }
+
+  get dayTime() { return this.s.clock / CYCLE; }   // 0..1
+  get night() { return isNight(this.dayTime); }
 
   income() {
     return BUSINESSES.reduce((sum, b, i) => sum + bizIncome(b, this.s.biz[i]), 0) * this.mult;
@@ -275,6 +280,7 @@ export class Game {
   tick(dt, player) {
     this.time += dt;
     this.s.played += dt;
+    this.s.clock = (this.s.clock + dt) % CYCLE;
     // Businesses make money.
     const inc = this.income();
     if (inc > 0) {
@@ -352,6 +358,7 @@ export class Game {
     this.s.pick = Math.max(0, Math.min(PICKS.length - 1, this.s.pick | 0));
     this.s.health = Math.max(1, Math.min(10, this.s.health | 0));
     this.s.hunger = Math.max(0, Math.min(HUNGER.max, this.s.hunger | 0));
+    this.s.clock = (+this.s.clock || 0) % CYCLE;
     this.s.biz = BUSINESSES.map((b, k) => Math.max(0, Math.min(b.max, (data.biz && data.biz[k]) | 0)));
     if (Array.isArray(data.edits)) this.world.applyEdits(data.edits);
     this.world.setUnlocked(this.s.ores);

@@ -118,6 +118,36 @@ export function boom(big = false) {
   noise(t, 0.25, 2000, 0.5, 0.5);
   tone(big ? 70 : 90, t, big ? 1.2 : 0.7, 'sine', 0.9, 28);
 }
+export function groan() {
+  if (!ctx) return;
+  const t = now();
+  const o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(95 + Math.random() * 30, t);
+  o.frequency.linearRampToValueAtTime(70, t + 1.1);
+  lfo.frequency.value = 7;
+  lg.gain.value = 8;
+  lfo.connect(lg).connect(o.frequency);
+  const f = ctx.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.value = 600;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.18, t + 0.15);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+  o.connect(f).connect(g).connect(master);
+  o.start(t); lfo.start(t);
+  o.stop(t + 1.3); lfo.stop(t + 1.3);
+}
+export function zombieHurt() {
+  const t = now();
+  tone(150, t, 0.2, 'sawtooth', 0.15, 90);
+  noise(t, 0.08, 900, 1, 0.25);
+}
+export function zombieDie() {
+  const t = now();
+  tone(130, t, 0.5, 'sawtooth', 0.16, 50);
+  noise(t, 0.3, 500, 0.7, 0.3);
+}
 export function click() {
   tone(880, now(), 0.04, 'square', 0.06);
 }
