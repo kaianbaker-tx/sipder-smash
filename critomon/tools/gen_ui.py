@@ -1,4 +1,4 @@
-"""Draw the Crito Mon logo, the app icon and the loading splash.
+"""Draw the Crittermon logo, the app icon and the loading splash.
 
 Run: python3 tools/gen_ui.py   (writes assets/ui/*.png)
 """
@@ -14,18 +14,18 @@ INK = (28, 22, 60)
 BLUE = (40, 90, 200)
 YELLOW = (255, 214, 40)
 YELLOW2 = (255, 160, 20)
-RED = (236, 56, 56)
+GREEN = (45, 190, 82)
 
 
 def ball(d, cx, cy, r, ink=INK):
     d.ellipse((cx - r - r * 0.12, cy - r - r * 0.12, cx + r + r * 0.12, cy + r + r * 0.12), fill=ink)
-    d.pieslice((cx - r, cy - r, cx + r, cy + r), 180, 360, fill=RED)
+    d.pieslice((cx - r, cy - r, cx + r, cy + r), 180, 360, fill=GREEN)
     d.pieslice((cx - r, cy - r, cx + r, cy + r), 0, 180, fill=(250, 250, 250))
     d.rectangle((cx - r, cy - r * 0.1, cx + r, cy + r * 0.1), fill=ink)
     d.ellipse((cx - r * 0.34, cy - r * 0.34, cx + r * 0.34, cy + r * 0.34), fill=ink)
     d.ellipse((cx - r * 0.2, cy - r * 0.2, cx + r * 0.2, cy + r * 0.2), fill=(250, 250, 250))
     # shine
-    d.ellipse((cx - r * 0.62, cy - r * 0.72, cx - r * 0.3, cy - r * 0.45), fill=(255, 150, 150))
+    d.ellipse((cx - r * 0.62, cy - r * 0.72, cx - r * 0.3, cy - r * 0.45), fill=(170, 245, 180))
 
 
 def gradient_text(size, text, font, top, bottom):
@@ -44,10 +44,14 @@ def gradient_text(size, text, font, top, bottom):
 
 
 def logo():
-    W, H = 1720, 560
-    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     f = ImageFont.truetype(FONT, 250)
-    words = [("CRITO", 90), ("MON", 1040)]
+    gap = 240  # room for the ball between the words
+    w1 = f.getbbox("CRITTER")[2]
+    w2 = f.getbbox("MON")[2]
+    W, H = 90 + w1 + gap + w2 + 90, 560
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    words = [("CRITTER", 90), ("MON", 90 + w1 + gap)]
+    ball_x = 90 + w1 + gap // 2
     y = 110
     layers = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(layers)
@@ -63,7 +67,7 @@ def logo():
         shifted.paste(g, (x, y), g)
         im = Image.alpha_composite(im, shifted)
     d = ImageDraw.Draw(im)
-    ball(d, 925, 260, 78)
+    ball(d, ball_x, 260, 78)
     im = im.crop(im.getbbox())
     im.save(os.path.join(OUT, "logo.png"))
     return im

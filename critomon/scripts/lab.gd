@@ -2,8 +2,8 @@ class_name Lab
 extends Builder
 ## Inside Professor Birch's Lab, built far away from town (walls only show
 ## from the inside, so the camera can sit "outside" and still see in).
-## The big table in the middle holds three Crito Balls: pick your first
-## Crito Mon here!
+## The big table in the middle holds three Critter Balls: pick your first
+## Crittermon here!
 
 const ORIGIN := Vector3(400, 0, 0)
 const HALF := Vector2(9, 11)          # room half size (x, z)
@@ -11,7 +11,7 @@ const TABLE := Vector3(0, 0, -2)       # table centre (local)
 const EXIT := Vector3(0, 0, 10.3)      # stand here to leave
 const SPAWN := Vector3(0, 0, 8.6)      # where you appear coming in
 
-var balls: Array[CritoBall] = []       # one per starter, same order as Dex.STARTERS
+var balls: Array[CritterBall] = []       # one per starter, same order as Dex.STARTERS
 var stands: Array[Node3D] = []
 var _t := 0.0
 
@@ -93,8 +93,8 @@ func _room() -> void:
 		box(Vector3(3.0, 1.8, 0.1), Vector3(x, 2.9, -d + 0.06), Color(0.6, 0.85, 1.0), 0.0, null, {"emission": 0.45})
 		box(Vector3(3.2, 0.14, 0.2), Vector3(x, 1.95, -d + 0.1), Color.WHITE)
 		box(Vector3(0.1, 1.8, 0.14), Vector3(x, 2.9, -d + 0.1), Color.WHITE)
-	box(Vector3(2.6, 1.6, 0.06), Vector3(0, 3.1, -d + 0.05), Color(1.0, 0.85, 0.3))
-	var p := words("CRITO MON\nCATCH 'EM!", Vector3(0, 3.1, -d + 0.1), 0.0, 44, Color(0.93, 0.25, 0.25), Color.WHITE)
+	box(Vector3(3.4, 1.6, 0.06), Vector3(0, 3.1, -d + 0.05), Color(1.0, 0.85, 0.3))
+	var p := words("CRITTERMON\nCATCH 'EM!", Vector3(0, 3.1, -d + 0.1), 0.0, 44, Color(0.93, 0.25, 0.25), Color.WHITE)
 	p.double_sided = false
 	# door and mat
 	box(Vector3(2.4, 3.0, 0.1), Vector3(0, 1.5, d - 0.06), Color(0.5, 0.78, 1.0), 0.0, null, {"emission": 0.3})
@@ -123,7 +123,7 @@ func _table() -> void:
 		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		disc(0.22, 0.1, Vector3(0, 0.02, 0), Color(0.3, 0.35, 0.45), stand)
 		stands.append(stand)
-		var b := CritoBall.new()
+		var b := CritterBall.new()
 		b.position = sp + Vector3(0, 0.21, 0)
 		b.scale = Vector3.ONE * 1.1
 		add_child(b)
@@ -173,7 +173,7 @@ func _machines() -> void:
 	box(Vector3(1.4, 1.2, 2.4), hm + Vector3(0, 0.6, 0), Color(0.95, 0.95, 0.97))
 	box(Vector3(1.2, 0.1, 2.2), hm + Vector3(0, 1.22, 0), Color(0.93, 0.3, 0.35))
 	for j in 3:
-		var b := CritoBall.new()
+		var b := CritterBall.new()
 		b.position = hm + Vector3(0, 1.4, (j - 1) * 0.6)
 		b.rotation.y = -PI / 2
 		add_child(b)

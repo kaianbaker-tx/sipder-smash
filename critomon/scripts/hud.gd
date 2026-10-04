@@ -1,7 +1,7 @@
 class_name HUD
 extends CanvasLayer
 ## What you see while walking around: your goal, the "talk" prompt, your
-## lead Crito Mon, little pop-up messages and screen fades / battle wipes.
+## lead Crittermon, little pop-up messages and screen fades / battle wipes.
 
 var goal_box: PanelContainer
 var goal: Label

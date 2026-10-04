@@ -146,7 +146,7 @@ func _town() -> void:
 	_house("res://assets/suburban/building-type-e.glb", Vector3(16, 0, 17), PI, 6.5, 0.4, "It's JAX's house. Nobody is home.", Color(1.0, 0.95, 0.85))
 	_house("res://assets/suburban/building-type-k.glb", Vector3(-17, 0, -15), 0.0, 6.5, -0.28, "A sign says: GONE FISHING.", Color(0.95, 1.0, 0.95))
 	_house("res://assets/suburban/building-type-c.glb", Vector3(-31, 0, -1), PI / 2, 6.0, 0.6, "Nobody answers. You hear snoring inside.", Color(1.05, 1.0, 0.8))
-	_house("res://assets/suburban/building-type-u.glb", Vector3(31, 0, -1), -PI / 2, 6.0, 0.15, "A voice says: Crito Mon grow stronger when they battle!", Color(1.0, 0.92, 0.95))
+	_house("res://assets/suburban/building-type-u.glb", Vector3(31, 0, -1), -PI / 2, 6.0, 0.15, "A voice says: Crittermon grow stronger when they battle!", Color(1.0, 0.92, 0.95))
 	_lab()
 	# fountain in the square
 	prop("res://assets/builder/pavement-fountain.glb", Vector3(0, 0, 2), 0.0, 7.0, {}, "")
@@ -167,7 +167,7 @@ func _town() -> void:
 	prop("res://assets/suburban/planter.glb", Vector3(-5, 0, -8), 0.0, 3.0, {}, "box")
 	prop("res://assets/suburban/planter.glb", Vector3(5, 0, 12), 0.0, 3.0, {}, "box")
 	signpost(Vector3(-5, 0, 7), 0.4, "BIRCHWOOD TOWN\nA town where new adventures begin!")
-	signpost(Vector3(-3.5, 0, -30), 0.0, "ROUTE 1 is north!\nWatch out: wild Crito Mon live in the tall grass.")
+	signpost(Vector3(-3.5, 0, -30), 0.0, "ROUTE 1 is north!\nWatch out: wild Crittermon live in the tall grass.")
 	# town trees
 	for p in [Vector3(-8, 0, 22), Vector3(8, 0, 23), Vector3(-26, 0, 22), Vector3(26, 0, 24), Vector3(-28, 0, -20),
 			Vector3(28, 0, -24), Vector3(-8, 0, -24), Vector3(26, 0, 10), Vector3(-26, 0, 10), Vector3(-34, 0, -26), Vector3(34, 0, 14)]:
@@ -261,7 +261,7 @@ func _route() -> void:
 	flowers(Vector3(-12, 0, -140), 3.0, 30)
 	flowers(Vector3(12, 0, -176), 3.0, 30)
 	signpost(Vector3(3.5, 0, -40), 0.0, "ROUTE 1\nBirchwood Town  <->  The Arena")
-	signpost(Vector3(10, 0, -143), 0.0, "CAMP CRITO\nRest here! Nurse Pearl heals Crito Mon for free.")
+	signpost(Vector3(10, 0, -143), 0.0, "CAMP CRITTER\nRest here! Nurse Pearl heals Crittermon for free.")
 
 
 func _rock(pos: Vector3, s: float) -> void:

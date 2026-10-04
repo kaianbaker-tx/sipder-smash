@@ -1,7 +1,7 @@
 class_name TitleScreen
 extends CanvasLayer
 ## The title: the camera circles Birchwood Town while the three starter
-## Crito Mon bounce by the fountain. NEW GAME or CONTINUE.
+## Crittermon bounce by the fountain. NEW GAME or CONTINUE.
 
 var main: Node
 var root: Control

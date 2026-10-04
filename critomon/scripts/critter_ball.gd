@@ -1,17 +1,17 @@
-class_name CritoBall
+class_name CritterBall
 extends Node3D
-## A red and white Crito Ball. The top can pop open. About 0.3 m across at
+## A green and white Critter Ball. The top can pop open. About 0.3 m across at
 ## scale 1. The hinge is at the back (+Z).
 
 var top: Node3D
 var glow := 0.0:
 	set(v):
 		glow = v
-		if _red:
-			_red.set_shader_parameter("emission", 0.15 + v)
+		if _top:
+			_top.set_shader_parameter("emission", 0.15 + v)
 			_white.set_shader_parameter("emission", v)
 
-var _red: ShaderMaterial
+var _top: ShaderMaterial
 var _white: ShaderMaterial
 
 static var _half: SphereMesh
@@ -39,10 +39,10 @@ func _ready() -> void:
 		_button.height = 0.03
 		_button.radial_segments = 12
 		_button.rings = 1
-	_red = Toon.unique(Color(0.93, 0.18, 0.2))
-	_red.set_shader_parameter("rim", 0.6)
-	_red.set_shader_parameter("emission", 0.15)
-	_red.next_pass = Toon.outline()
+	_top = Toon.unique(Color(0.16, 0.74, 0.3))
+	_top.set_shader_parameter("rim", 0.6)
+	_top.set_shader_parameter("emission", 0.15)
+	_top.next_pass = Toon.outline()
 	_white = Toon.unique(Color(0.97, 0.97, 0.97))
 	_white.set_shader_parameter("rim", 0.5)
 	_white.next_pass = Toon.outline()
@@ -63,7 +63,7 @@ func _ready() -> void:
 	top = hinge
 	var t := MeshInstance3D.new()
 	t.mesh = _half
-	t.material_override = _red
+	t.material_override = _top
 	t.position = Vector3(0, 0, -0.15)
 	hinge.add_child(t)
 	var ring := MeshInstance3D.new()

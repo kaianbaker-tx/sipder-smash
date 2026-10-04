@@ -1,4 +1,4 @@
-"""Make every Crito Mon sound effect and the chiptune songs.
+"""Make every Crittermon sound effect and the chiptune songs.
 
 Run: python3 tools/gen_audio.py   (needs numpy, scipy and soundfile)
 Writes assets/sounds/*.wav and assets/music/*.ogg

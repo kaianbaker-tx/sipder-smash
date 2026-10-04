@@ -1,10 +1,10 @@
 extends Node3D
-## Runs Crito Mon: the title, the story, walking around, talking, doors,
-## wild Crito Mon in tall grass, trainers, battles and Connect Four.
+## Runs Crittermon: the title, the story, walking around, talking, doors,
+## wild Crittermon in tall grass, trainers, battles and Connect Four.
 ##
 ## Story: 1) walk to Prof. Birch's Lab, 2) pick EMBERPUP, BUBBLOO or
 ## SPROUTLE at the table, 3) JAX (a show-off) battles you right there,
-## 4) explore Route 1 (trainers, Connect Four players, wild Crito Mon),
+## 4) explore Route 1 (trainers, Connect Four players, wild Crittermon),
 ## 5) beat JAX at The Arena to become the Route 1 Champion.
 
 const RIVAL_PICK := {"emberpup": "bubbloo", "bubbloo": "sproutle", "sproutle": "emberpup"}
@@ -97,7 +97,7 @@ func _ready() -> void:
 # ------------------------------------------------------------------ setup
 
 func _make_gate() -> void:
-	# JAX blocks the way north until you have a Crito Mon
+	# JAX blocks the way north until you have a Crittermon
 	gate = StaticBody3D.new()
 	var cs := CollisionShape3D.new()
 	var b := BoxShape3D.new()
@@ -119,10 +119,10 @@ func _make_npcs() -> void:
 	var L := Lab.ORIGIN
 	prof = _npc({"id": "prof", "title": "PROF. BIRCH", "skin": "prof", "kind": "prof", "pos": L + Lab.TABLE + Vector3(0, 0, -2.2), "yaw": PI})
 	_npc({"id": "aide", "title": "LAB AIDE", "skin": "aide", "gear": {"glasses": true}, "pos": L + Vector3(-5.8, 0, 7.0), "yaw": -PI / 2,
-		"lines": ["The Professor studies how Crito Mon live in the wild.", "Tip: if your Crito Mon get tired, use the HEAL machine over there!"]})
+		"lines": ["The Professor studies how Crittermon live in the wild.", "Tip: if your Crittermon get tired, use the HEAL machine over there!"]})
 	_npc({"id": "mom", "title": "MOM", "skin": "mom", "kind": "mom", "pos": Vector3(-12.5, 0, 9.5), "yaw": 0.0})
 	_npc({"id": "kid", "title": "KID", "skin": "kid", "gear": {"cap": Color(0.25, 0.55, 0.95), "cap2": Color(0.95, 0.95, 0.3)}, "pos": Vector3(5.5, 0, -2.5), "yaw": PI / 2,
-		"lines": ["Wild Crito Mon hide in the TALL GRASS!", "When a wild Crito Mon is weak, throw a CRITO BALL to catch it!"]})
+		"lines": ["Wild Crittermon hide in the TALL GRASS!", "When a wild Crittermon is weak, throw a CRITTER BALL to catch it!"]})
 	rival = _npc({"id": "rival", "title": "JAX", "skin": "rival", "kind": "rival", "pos": Vector3(0, 0, EXIT_GATE_Z - 0.2), "yaw": PI,
 		"sight": 9.0, "intro": "Finally! Took you long enough, slowpoke. Get ready to lose!",
 		"lose_line": "WHAT?! No way! I can't believe I lost to YOU!", "after": "Hmph. You just got lucky. Next time I'll crush you!"})
@@ -130,19 +130,19 @@ func _make_npcs() -> void:
 		"team": [["zappit", 4]], "intro": "Hey, you look new! Let's battle!", "lose_line": "Aww, I lost! You're really good!",
 		"after": "I'm going to train in the tall grass some more.", "reward": {"potion": 1}})
 	_npc({"id": "mia", "title": "LASS MIA", "skin": "lass", "kind": "mon", "pos": Vector3(-7.0, 0, -90), "yaw": -PI / 2, "sight": 10.0,
-		"team": [["fluffle", 5], ["buzzlet", 4]], "intro": "Are your Crito Mon cute AND strong? Let's see!", "lose_line": "My cute team lost...",
+		"team": [["fluffle", 5], ["buzzlet", 4]], "intro": "Are your Crittermon cute AND strong? Let's see!", "lose_line": "My cute team lost...",
 		"after": "FLUFFLE loves floating on the wind.", "reward": {"ball": 2}})
 	_npc({"id": "ben", "title": "BUG CATCHER BEN", "skin": "bugcatcher", "gear": {"hat": Color(0.95, 0.85, 0.5), "hat2": Color(0.3, 0.6, 0.3)}, "kind": "mon", "pos": Vector3(-10, 0, -114), "yaw": -PI / 2, "sight": 8.0,
-		"team": [["buzzlet", 5], ["buzzlet", 6]], "intro": "My bug Crito Mon are the best! Bzzzz!", "lose_line": "My bugs got squashed!",
-		"after": "FIRE moves are super strong against BUG Crito Mon. Shh!", "reward": {"potion": 1}})
+		"team": [["buzzlet", 5], ["buzzlet", 6]], "intro": "My bug Crittermon are the best! Bzzzz!", "lose_line": "My bugs got squashed!",
+		"after": "FIRE moves are super strong against BUG Crittermon. Shh!", "reward": {"potion": 1}})
 	_npc({"id": "dot", "title": "PUZZLE KID DOT", "skin": "c4kid", "gear": {"glasses": true}, "kind": "c4", "c4_level": 2, "pos": Vector3(15.6, 0, -140), "yaw": PI / 2, "sight": 7.0,
-		"intro": "I don't battle with Crito Mon. I battle with... CONNECT FOUR! Get four in a row to win!", "lose_line": "Whoa! You connected four! You're smart!",
+		"intro": "I don't battle with Crittermon. I battle with... CONNECT FOUR! Get four in a row to win!", "lose_line": "Whoa! You connected four! You're smart!",
 		"after": "Try to make TWO ways to win at once. That's my secret!", "reward": {"ball": 3}})
 	_npc({"id": "pearl", "title": "NURSE PEARL", "skin": "nurse", "kind": "heal", "pos": Vector3(21.5, 0, -145.5), "yaw": PI / 2,
-		"lines": ["Welcome to CAMP CRITO!"]})
+		"lines": ["Welcome to CAMP CRITTER!"]})
 	_npc({"id": "hank", "title": "HIKER HANK", "skin": "hiker", "gear": {"hat": Color(0.55, 0.38, 0.22), "hat2": Color(0.3, 0.22, 0.15)}, "kind": "mon", "pos": Vector3(-8.5, 0, -160), "yaw": -PI / 2, "sight": 9.0,
 		"team": [["pebblit", 6], ["zappit", 6]], "intro": "Hup hup! Rocks are tough! Want to see?", "lose_line": "Ha ha! You smashed my rocks!",
-		"after": "WATER and GRASS moves beat ROCK Crito Mon.", "reward": {"potion": 2}})
+		"after": "WATER and GRASS moves beat ROCK Crittermon.", "reward": {"potion": 2}})
 	_npc({"id": "connie", "title": "GRANDMA CONNIE", "skin": "grandma", "gear": {"glasses": true}, "kind": "c4", "c4_level": 3, "pos": Vector3(9.5, 0, -181), "yaw": PI / 2, "sight": 11.0,
 		"intro": "Oh, a young trainer! I've played CONNECT FOUR for 70 years. Let's play, dear!", "lose_line": "My my! You beat Grandma Connie! What a clever kid!",
 		"after": "Always block your friend's three in a row, dear.", "reward": {"potion": 3, "ball": 2}})
@@ -175,11 +175,11 @@ func apply_story() -> void:
 
 func _update_goal() -> void:
 	if not Game.flag("starter"):
-		hud.set_goal("Go to PROF. BIRCH'S LAB" if area == "town" else "Pick a Crito Mon at the table!")
+		hud.set_goal("Go to PROF. BIRCH'S LAB" if area == "town" else "Pick a Crittermon at the table!")
 	elif not Game.flag("champion"):
 		hud.set_goal("Go north on ROUTE 1 and beat JAX at THE ARENA!")
 	else:
-		hud.set_goal("You're the Route 1 Champion! Catch more Crito Mon!")
+		hud.set_goal("You're the Route 1 Champion! Catch more Crittermon!")
 
 
 ## Start playing (from the title screen).
@@ -195,8 +195,8 @@ func begin(new_game: bool) -> void:
 	busy = false
 	if new_game:
 		busy = true
-		await dialog.say("Welcome to the world of CRITO MON!")
-		await dialog.say("Today is a big day. PROFESSOR BIRCH is going to give you your very first Crito Mon!")
+		await dialog.say("Welcome to the world of CRITTERMON!")
+		await dialog.say("Today is a big day. PROFESSOR BIRCH is going to give you your very first Crittermon!")
 		await dialog.say("His lab is the big white building with the red roof. Walk there and go inside!")
 		busy = false
 
@@ -238,7 +238,7 @@ func _process(delta: float) -> void:
 	if area == "lab" and player.global_position.distance_to(Lab.ORIGIN + Lab.EXIT) < 1.0:
 		_go_through("town")
 		return
-	# JAX stops you going north without a Crito Mon
+	# JAX stops you going north without a Crittermon
 	if area == "town" and not Game.flag("starter") and player.global_position.z < EXIT_GATE_Z + 2.0 and absf(player.global_position.x) < 6.0:
 		_blocked()
 		return
@@ -291,7 +291,7 @@ func _find_target():
 		if score < best_d:
 			best_d = score
 			best = it
-	# the three Crito Balls on the lab table
+	# the three Critter Balls on the lab table
 	if area == "lab" and not Game.flag("starter"):
 		for i in 3:
 			var bp := lab.ball_pos(i)
@@ -354,12 +354,12 @@ func _talk(n: NPC) -> void:
 				await dialog.say("Good morning, sweetie! PROFESSOR BIRCH is waiting at his lab.", n.title)
 				await dialog.say("It's the big white building with the red roof. Go on!", n.title)
 			else:
-				await dialog.say("Your Crito Mon look like they need a rest.", n.title)
+				await dialog.say("Your Crittermon look like they need a rest.", n.title)
 				await _heal("MOM gave your team a big hug!")
 		"heal":
 			for l in n.lines:
 				await dialog.say(l, n.title)
-			await _heal("NURSE PEARL healed your Crito Mon!")
+			await _heal("NURSE PEARL healed your Crittermon!")
 		"prof":
 			await _talk_prof()
 		"rival":
@@ -377,26 +377,26 @@ func _heal(msg: String) -> void:
 	Sfx.play("heal")
 	FX.sparkle(self, player.global_position + Vector3(0, 1, 0), Color(0.6, 1.0, 0.7))
 	await dialog.say(msg)
-	await dialog.say("Your Crito Mon are full of energy again!")
+	await dialog.say("Your Crittermon are full of energy again!")
 	save_spot()
 
 
 func _talk_prof() -> void:
 	if not Game.flag("starter"):
-		await dialog.say("Walk up to the table and look at the Crito Balls. Pick the one you like best!", prof.title)
+		await dialog.say("Walk up to the table and look at the Critter Balls. Pick the one you like best!", prof.title)
 		return
 	await dialog.say("How is %s doing? Let me check your team..." % Dex.mon_name(Game.party[0]), prof.title)
-	await _heal("PROFESSOR BIRCH healed your Crito Mon!")
+	await _heal("PROFESSOR BIRCH healed your Crittermon!")
 	var seen := Game.seen.size()
 	var caught := Game.caught.size()
-	await dialog.say("Your CRITO DEX: you've seen %d kinds and caught %d kinds of Crito Mon!" % [seen, caught], prof.title)
+	await dialog.say("Your CRITTER DEX: you've seen %d kinds and caught %d kinds of Crittermon!" % [seen, caught], prof.title)
 	if caught < Dex.SPECIES.size() - 2:
 		await dialog.say("There are more out on ROUTE 1. Go catch them!", prof.title)
 
 
 func _talk_rival() -> void:
 	if not Game.flag("starter"):
-		await dialog.say("Hey, slowpoke! You can't go in the tall grass without a Crito Mon. Everybody knows that!", rival.title)
+		await dialog.say("Hey, slowpoke! You can't go in the tall grass without a Crittermon. Everybody knows that!", rival.title)
 		await dialog.say("My dad, PROFESSOR BIRCH, gives them out at his lab. Not that YOU would know what to do with one. Ha!", rival.title)
 	elif Game.flag("champion"):
 		await dialog.say(rival.after, rival.title)
@@ -442,11 +442,11 @@ func _meet_prof() -> void:
 	prof.person.wave = 1.0
 	await dialog.say("Hello there! Welcome to my lab!", prof.title)
 	prof.person.wave = 0.0
-	await dialog.say("I'm PROFESSOR BIRCH. People call me the Crito Mon Professor!", prof.title)
-	await dialog.say("This world is full of amazing creatures called CRITO MON.", prof.title)
+	await dialog.say("I'm PROFESSOR BIRCH. People call me the Crittermon Professor!", prof.title)
+	await dialog.say("This world is full of amazing creatures called CRITTERMON.", prof.title)
 	await dialog.say("Some are friends, some are pets, and some battle with their trainers!", prof.title)
 	rig.shot(lab.to_world(Lab.TABLE + Vector3(0, 3.2, 5.0)), lab.to_world(Lab.TABLE + Vector3(0, 1.1, 0)), 0.8)
-	await dialog.say("On this table are three Crito Balls. Each one has a Crito Mon inside!", prof.title)
+	await dialog.say("On this table are three Critter Balls. Each one has a Crittermon inside!", prof.title)
 	await dialog.say("Walk up to a ball and press %s to look inside. Then pick your partner!" % ("A" if Game.touch_mode else "E"), prof.title)
 	rig.release()
 	rig.snap()
@@ -474,7 +474,7 @@ func _look_at_starter(i: int) -> void:
 	Sfx.cry(sp)
 	await get_tree().create_timer(0.3).timeout
 	mon.hop(0.3)
-	await dialog.say("It's %s, the %s Crito Mon! %s" % [s.name, Dex.TYPES[s.type].name, s.about], prof.title)
+	await dialog.say("It's %s, the %s Crittermon! %s" % [s.name, Dex.TYPES[s.type].name, s.about], prof.title)
 	var pick := await dialog.ask("Do you want %s to be your partner?" % s.name, ["YES!", "NO"], prof.title)
 	if pick != 0:
 		mon.shrink_to(bp)
@@ -509,7 +509,7 @@ func _rival_arrives() -> void:
 	rig.shot(player.global_position + Vector3(-3.0, 3.0, 5.0), player.global_position + Vector3(0, 1.0, 1.0), 0.8)
 	await rival.walk_to(player.global_position, 2.0)
 	player.face_point(rival.global_position)
-	await dialog.say("Huh? YOU got a Crito Mon before ME? That's not fair!", rival.title)
+	await dialog.say("Huh? YOU got a Crittermon before ME? That's not fair!", rival.title)
 	await dialog.say("I'm JAX. PROFESSOR BIRCH is my dad, so I'm basically the best trainer ever.", rival.title)
 	var mine: String = RIVAL_PICK[Game.flags.starter]
 	var idx := Dex.STARTERS.find(mine)
@@ -522,10 +522,10 @@ func _rival_arrives() -> void:
 	var result := await _battle([Dex.make(mine, 4)], {"name": rival.title, "skin": rival.skin, "gear": rival.gear, "rival": true}, true)
 	rig.shot(player.global_position + Vector3(-3.0, 3.0, 5.0), player.global_position + Vector3(0, 1.0, 1.0), 0.0)
 	if result == "win":
-		await dialog.say("WHAT?! I picked the wrong Crito Mon! That's the only reason you won!", rival.title)
+		await dialog.say("WHAT?! I picked the wrong Crittermon! That's the only reason you won!", rival.title)
 		await dialog.say("Whatever. That was just practice.", rival.title)
 	else:
-		await dialog.say("Ha ha! Too easy! Maybe Crito Mon just aren't your thing.", rival.title)
+		await dialog.say("Ha ha! Too easy! Maybe Crittermon just aren't your thing.", rival.title)
 	await dialog.say("I'm going to THE ARENA at the end of ROUTE 1. Try to keep up, slowpoke!", rival.title)
 	await dialog.say("See ya, wouldn't wanna be ya!", rival.title)
 	await rival.walk_to(Lab.ORIGIN + Lab.EXIT, 0.3, 5.5)
@@ -542,9 +542,9 @@ func _rival_arrives() -> void:
 	Game.give("ball", 5)
 	Game.give("potion", 3)
 	Sfx.play("item")
-	hud.toast("Got 5 CRITO BALLS and 3 POTIONS!")
-	await dialog.say("You got 5 CRITO BALLS and 3 POTIONS!")
-	await dialog.say("Wild Crito Mon live in the TALL GRASS on ROUTE 1. Make one weak, then throw a CRITO BALL to catch it!", prof.title)
+	hud.toast("Got 5 CRITTER BALLS and 3 POTIONS!")
+	await dialog.say("You got 5 CRITTER BALLS and 3 POTIONS!")
+	await dialog.say("Wild Crittermon live in the TALL GRASS on ROUTE 1. Make one weak, then throw a CRITTER BALL to catch it!", prof.title)
 	await dialog.say("Press %s any time to see your team and your bag. Good luck!" % ("MENU" if Game.touch_mode else "ESC or TAB"), prof.title)
 	rig.release()
 	apply_story()
@@ -589,7 +589,7 @@ func _trainer(n: NPC, spotted: bool) -> void:
 		await dialog.say(n.lose_line, n.title)
 		for item in n.reward:
 			Game.give(item, n.reward[item])
-			var nice: String = {"potion": "POTION", "ball": "CRITO BALL"}[item]
+			var nice: String = {"potion": "POTION", "ball": "CRITTER BALL"}[item]
 			var cnt: int = n.reward[item]
 			Sfx.play("item")
 			await dialog.say("%s gave you %d %s%s!" % [n.title, cnt, nice, "S" if cnt > 1 else ""])
@@ -616,7 +616,7 @@ func _champion() -> void:
 		FX.sparkle(world, trophy.position + Vector3(0, 1.0, 0))
 	await dialog.say("CONGRATULATIONS! You are the ROUTE 1 CHAMPION!")
 	await dialog.say("You and %s make an awesome team!" % Dex.mon_name(Game.party[0]))
-	await dialog.say("There are still more Crito Mon to catch. Keep exploring! TO BE CONTINUED...")
+	await dialog.say("There are still more Crittermon to catch. Keep exploring! TO BE CONTINUED...")
 	rig.release()
 	_update_goal()
 
@@ -667,7 +667,7 @@ func _blackout() -> void:
 	player.set_partner(Game.lead().sp)
 	await hud.fade_in(0.4)
 	await dialog.say("You hurried back to PROFESSOR BIRCH'S LAB...")
-	await dialog.say("Don't worry! Your Crito Mon are all better now. Try again!", prof.title)
+	await dialog.say("Don't worry! Your Crittermon are all better now. Try again!", prof.title)
 	save_spot()
 
 

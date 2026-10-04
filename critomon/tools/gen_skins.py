@@ -117,7 +117,7 @@ def outfit(base, shirt, pants, sleeves=None, shoe=(230, 60, 60), hair=None, bare
 def ball_emblem(im, cx, cy, r):
     d = ImageDraw.Draw(im)
     d.ellipse((cx - r - 6, cy - r - 6, cx + r + 6, cy + r + 6), fill=(30, 20, 40, 255))
-    d.pieslice((cx - r, cy - r, cx + r, cy + r), 180, 360, fill=(240, 50, 50, 255))
+    d.pieslice((cx - r, cy - r, cx + r, cy + r), 180, 360, fill=(45, 190, 80, 255))
     d.pieslice((cx - r, cy - r, cx + r, cy + r), 0, 180, fill=(250, 250, 250, 255))
     d.rectangle((cx - r, cy - 5, cx + r, cy + 5), fill=(30, 20, 40, 255))
     d.ellipse((cx - 16, cy - 16, cx + 16, cy + 16), fill=(30, 20, 40, 255))
@@ -152,7 +152,7 @@ def save(im, name):
 
 
 def main():
-    # you: red jacket with a white stripe and a Crito Ball on the chest
+    # you: red jacket with a white stripe and a Critter Ball on the chest
     im = outfit("skaterMaleA", (225, 45, 50), (45, 55, 90), sleeves=(235, 235, 240), shoe=(225, 45, 50))
     stripe(im, (150, 930, 490, 960), (245, 245, 250))
     ball_emblem(im, 320, 850, 46)

@@ -1,7 +1,7 @@
 class_name Player
 extends CharacterBody3D
 ## You! Walk (or hold RUN), talk to people and walk through tall grass.
-## Your first Crito Mon follows you around.
+## Your first Crittermon follows you around.
 
 signal moved(dist: float)
 
@@ -120,7 +120,7 @@ func walk_to(p: Vector3, speed := 1.0) -> void:
 
 # ------------------------------------------------------------------ partner
 
-## Your lead Crito Mon walks behind you ("" hides it).
+## Your lead Crittermon walks behind you ("" hides it).
 func set_partner(species: String) -> void:
 	if partner and partner.species == species:
 		return
