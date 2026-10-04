@@ -1,16 +1,14 @@
-// Money, shopping, hunger, the mine growing back, and saving.
+// Money, shopping, hunger, explosions and saving.
 import { ORES, PICKS, PACKS, FOODS, BOOMS, HUNGER, MILESTONES, DOUBLE_MONEY_COST, moneyOreValue, money } from './data.js';
-import { B, BLOCKS, isOre } from './blocks.js';
-import { isProtected, R } from './world.js';
+import { B, BLOCKS, isOre, isLeaves } from './blocks.js';
 import { CYCLE, isNight } from './daynight.js';
-import { mineRoll } from './town.js';
 import { rng } from './noise.js';
 import * as sfx from './sound.js';
 
 const OLD_KEY = 'cave-cash-save-v1';
 const SETTINGS_KEY = 'cave-cash-settings';
 const slotKey = (n) => 'cave-cash-save-' + n;
-const REGROW = [25, 45];   // seconds before a mine block grows back
+const WORLD_VERSION = 2;   // the big island. Older saves keep their money but get a new world.
 
 export class Game {
   constructor(world, ui) {
@@ -18,7 +16,6 @@ export class Game {
     this.ui = ui;
     this.r = rng((Date.now() & 0xffffff) + 1);
     this.time = 0;
-    this.regrow = [];
     this.hungerClock = 0;
     this.starveClock = 0;
     this.healClock = 0;
@@ -28,8 +25,8 @@ export class Game {
   static fresh() {
     return {
       money: 0, earned: 0, ores: 1, pick: 0, x2: false, milestone: 0, played: 0,
-      inv: { [B.APPLE]: 3 }, hunger: HUNGER.max, health: 10,
-      clock: 0.05 * CYCLE, nights: 0, kills: 0,
+      inv: { [B.APPLE]: 3, [B.HOUSE_KIT]: 1 }, hunger: HUNGER.max, health: 10,
+      clock: 0.05 * CYCLE, nights: 0, kills: 0, spawn: null,
     };
   }
 
@@ -64,10 +61,7 @@ export class Game {
   // ---------- Mining ----------
   // What happens when you break a block. Returns {cash, give} so the game can show it.
   mined(id, x, y, z) {
-    const w = this.world;
-    const region = w.regionAt(x, y, z);
-    w.set(x, y, z, 0);
-    if (region === 1) this.regrow.push({ i: w.idx(x, y, z), at: this.time + REGROW[0] + this.r() * (REGROW[1] - REGROW[0]) });
+    this.world.set(x, y, z, 0);
     if (id === B.MONEY_ORE) {
       return { cash: this.earn(moneyOreValue(this.s.ores)), jackpot: true };
     }
@@ -79,7 +73,7 @@ export class Game {
     const give = BLOCKS[id].drop;
     if (give) this.give(give, 1);
     // Like in Minecraft, leaves sometimes drop an apple.
-    if (id === B.LEAVES && this.r() < 0.15) { this.give(B.APPLE, 1); return { give, apple: true }; }
+    if ((id === B.LEAVES || id === B.BIRCH_LEAVES) && this.r() < 0.15) { this.give(B.APPLE, 1); return { give, apple: true }; }
     return { give };
   }
 
@@ -135,8 +129,8 @@ export class Game {
   // Eat a food. With no id, eat the smallest food you have.
   eat(id) {
     const s = this.s;
-    if (!id) id = [B.APPLE, B.LEMONADE, B.PIZZA_FOOD].find((f) => s.inv[f]);
-    if (!id) { this.ui.toast('No food! Buy some in the SHOP. Leaves drop apples too.', 'bad'); sfx.nope(); return false; }
+    if (!id) id = [B.APPLE, B.CHICKEN, B.LEMONADE, B.PORK, B.BEEF, B.PIZZA_FOOD].find((f) => s.inv[f]);
+    if (!id) { this.ui.toast('No food! Get some from pigs, cows and chickens, or buy it in the SHOP.', 'bad'); sfx.nope(); return false; }
     if (s.hunger >= HUNGER.max) { this.ui.toast('You are full!'); return false; }
     this.take(id);
     s.hunger = Math.min(HUNGER.max, s.hunger + BLOCKS[id].food);
@@ -159,20 +153,11 @@ export class Game {
     if (!this.spend(ORES[i].cost)) return false;
     this.s.ores++;
     this.world.setUnlocked(this.s.ores);
-    // New ore pops into the walls of THE MINE.
-    const w = this.world, o = ORES[i];
-    let n = 0;
-    for (const c of w.mineCells) {
-      if (w.data[c] === B.STONE && this.r() < 0.2) {
-        const x = c % 128, z = ((c / 128) | 0) % 128, y = (c / (128 * 128)) | 0;
-        w.set(x, y, z, o.id);
-        n++;
-      }
-    }
-    this.ui.toast(`NEW! ${o.name} Ore is in THE MINE and in the caves!`, 'good');
+    const o = ORES[i];
+    this.ui.toast(`NEW! ${o.name} Ore shows up in caves and cliffs now. Dig deep!`, 'good');
     this.ui.toast(`Each ${o.name} block = ${money(o.value * this.mult)}`, 'good');
     this.ui.changed();
-    return n;
+    return true;
   }
 
   buyPick() {
@@ -226,14 +211,11 @@ export class Game {
       if (!w.inside(x, y, z)) continue;
       const id = w.data[w.idx(x, y, z)];
       if (!id || id === B.BEDROCK) continue;
-      const region = w.regionAt(x, y, z);
-      if (isProtected(region)) continue;
       if ((id === B.TNT || id === B.MEGA_TNT) && (dx || dy || dz)) { chain.push({ x, y, z, id }); continue; }
       w.set(x, y, z, 0);
-      if (region === R.MINE) this.regrow.push({ i: w.idx(x, y, z), at: this.time + REGROW[0] + r() * (REGROW[1] - REGROW[0]) });
       if (id === B.MONEY_ORE) { cash += moneyOreValue(this.s.ores); jackpot = true; }
       else if (isOre(id) && BLOCKS[id].ore < this.s.ores) cash += ORES[BLOCKS[id].ore].value;
-      else if (r() < 0.25 && BLOCKS[id].drop && !isOre(id)) this.give(BLOCKS[id].drop, 1);
+      else if (r() < 0.25 && BLOCKS[id].drop && !isOre(id) && !isLeaves(id)) this.give(BLOCKS[id].drop, 1);
     }
     return { cash: cash ? this.earn(cash) : 0, jackpot, chain };
   }
@@ -248,21 +230,10 @@ export class Game {
   }
 
   // ---------- Every frame ----------
-  tick(dt, player) {
+  tick(dt) {
     this.time += dt;
     this.s.played += dt;
     this.s.clock = (this.s.clock + dt) % CYCLE;
-    // The mine grows back.
-    const w = this.world;
-    for (let k = this.regrow.length - 1; k >= 0; k--) {
-      const g = this.regrow[k];
-      if (g.at > this.time) continue;
-      this.regrow.splice(k, 1);
-      if (w.data[g.i] !== 0) continue;
-      const x = g.i % 128, z = ((g.i / 128) | 0) % 128, y = (g.i / (128 * 128)) | 0;
-      if (player.overlapsBlock(x, y, z)) { g.at = this.time + 4; this.regrow.push(g); continue; }
-      w.set(x, y, z, mineRoll(this.r, this.s.ores, y));
-    }
   }
 
   // ---------- Saving ----------
@@ -271,6 +242,7 @@ export class Game {
     const p = player.pos;
     const data = {
       ...this.s,
+      v: WORLD_VERSION,
       pos: [p.x, p.y, p.z, player.yaw, player.pitch],
       edits: this.world.editList(),
       savedAt: Date.now(),
@@ -305,7 +277,8 @@ export class Game {
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
   }
 
-  // Put a saved game back.
+  // Put a saved game back. Returns false if it was from the old small world
+  // (then the money and stuff come along, but the world is new).
   restore(data) {
     const f = Game.fresh();
     for (const k of Object.keys(f)) if (data[k] !== undefined) this.s[k] = data[k];
@@ -314,9 +287,11 @@ export class Game {
     this.s.health = Math.max(1, Math.min(10, this.s.health | 0));
     this.s.hunger = Math.max(0, Math.min(HUNGER.max, this.s.hunger | 0));
     this.s.clock = (+this.s.clock || 0) % CYCLE;
-    if (Array.isArray(data.edits)) this.world.applyEdits(data.edits);
+    if (!this.s.inv || typeof this.s.inv !== 'object') this.s.inv = {};
+    const same = data.v === WORLD_VERSION;
+    if (!same) this.s.spawn = null;
+    if (same && Array.isArray(data.edits)) this.world.applyEdits(data.edits);
     this.world.setUnlocked(this.s.ores);
-    // Mine blocks that were dug out grow back soon.
-    for (const c of this.world.mineCells) if (this.world.data[c] === 0) this.regrow.push({ i: c, at: this.time + 3 + this.r() * 25 });
+    return same;
   }
 }

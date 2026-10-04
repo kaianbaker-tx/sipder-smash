@@ -17,6 +17,8 @@ export class Player {
     this.inWater = false;
     this.autoJump = true;
     this.walked = 0;     // for head bob and footsteps
+    this.fallTop = null; // where a fall started
+    this.fallHurt = 0;   // hearts to lose from a big fall
   }
 
   solid(x, y, z) {
@@ -91,6 +93,14 @@ export class Player {
       else if (stepUp && this.onGround && this.autoJump) v.y = 8.6;
     }
     if (this.onGround && len > 0.1) this.walked += Math.hypot(v.x, v.z) * dt;
+    // Falling a long way hurts, like in Minecraft. Water catches you.
+    if (this.inWater) this.fallTop = null;
+    else if (!this.onGround) this.fallTop = this.fallTop === null ? p.y : Math.max(this.fallTop, p.y);
+    else if (this.fallTop !== null) {
+      const fall = this.fallTop - p.y;
+      this.fallTop = null;
+      if (fall > 3.4) this.fallHurt += Math.ceil((fall - 3.4) / 2);
+    }
   }
 
   moveAxis(axis, amt) {

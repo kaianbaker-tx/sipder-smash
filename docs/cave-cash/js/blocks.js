@@ -6,6 +6,8 @@ export const TILE_NAMES = [
   'green', 'blue', 'metal', 'money_block', 'lemon', 'pizza', 'window', 'path',
   'cobble', 'orange', 'pink', 'money_ore', 'lamp',
   'tnt_side', 'tnt_top', 'mega_side', 'mega_top', 'house_icon', 'apple', 'lemonade', 'pizza_slice',
+  'snow', 'snow_side', 'spruce_log', 'spruce_leaves', 'birch_log', 'birch_leaves', 'cactus_side', 'cactus_top',
+  'tall_grass', 'poppy', 'dandelion', 'bed_top', 'bed_side', 'gravel', 'porkchop', 'beef', 'chicken_leg',
   'ore_copper', 'ore_iron', 'ore_gold', 'ore_ruby', 'ore_sapphire', 'ore_amethyst',
   'ore_lava', 'ore_ice', 'ore_rainbow', 'ore_cosmic',
   'crack0', 'crack1', 'crack2', 'crack3', 'crack4',
@@ -20,8 +22,10 @@ export const B = {
   PATH: 22, COBBLE: 23, ORANGE: 24, PINK: 25, LAMP: 26, TNT: 27, MEGA_TNT: 28,
   // Ores 30..39 (see ORES in data.js), then the money ore that replaces diamonds.
   ORE0: 30, MONEY_ORE: 40,
+  SNOW_GRASS: 41, SNOW: 42, SPRUCE_LOG: 43, SPRUCE_LEAVES: 44, BIRCH_LOG: 45, BIRCH_LEAVES: 46,
+  CACTUS: 47, TALL_GRASS: 48, POPPY: 49, DANDELION: 50, BED: 51, GRAVEL: 52,
   HOUSE_KIT: 200,   // not a real block: place it and a whole house appears
-  APPLE: 201, LEMONADE: 202, PIZZA_FOOD: 203,   // food you hold and eat
+  APPLE: 201, LEMONADE: 202, PIZZA_FOOD: 203, PORK: 204, BEEF: 205, CHICKEN: 206,   // food you hold and eat
 };
 
 // id -> { name, tiles: [top, bottom, side], hard (seconds with a wood pickaxe), drop, see (see-through) }
@@ -59,10 +63,25 @@ def(B.PINK, 'Pink Wool', 'pink', 0.3);
 def(B.LAMP, 'Lamp', 'lamp', 0.3, { glow: true });
 def(B.TNT, 'TNT', ['tnt_top', 'tnt_top', 'tnt_side'], 0.1, { boom: 3.5 });
 def(B.MEGA_TNT, 'MEGA TNT', ['mega_top', 'mega_top', 'mega_side'], 0.1, { boom: 6 });
+def(B.SNOW_GRASS, 'Snowy Grass', ['snow', 'dirt', 'snow_side'], 0.4, { drop: B.DIRT });
+def(B.SNOW, 'Snow', 'snow', 0.3);
+def(B.SPRUCE_LOG, 'Spruce Wood', ['log_top', 'log_top', 'spruce_log'], 0.8);
+def(B.SPRUCE_LEAVES, 'Spruce Leaves', 'spruce_leaves', 0.15, { see: true });
+def(B.BIRCH_LOG, 'Birch Wood', ['log_top', 'log_top', 'birch_log'], 0.8);
+def(B.BIRCH_LEAVES, 'Birch Leaves', 'birch_leaves', 0.15, { see: true });
+def(B.CACTUS, 'Cactus', ['cactus_top', 'cactus_top', 'cactus_side'], 0.3, { ouch: true });
+def(B.TALL_GRASS, 'Tall Grass', 'tall_grass', 0, { plant: true, drop: 0 });
+def(B.POPPY, 'Poppy', 'poppy', 0, { plant: true });
+def(B.DANDELION, 'Dandelion', 'dandelion', 0, { plant: true });
+def(B.BED, 'Bed', ['bed_top', 'planks', 'bed_side'], 0.3, { bed: true });
+def(B.GRAVEL, 'Gravel', 'gravel', 0.4);
 def(B.HOUSE_KIT, 'House Kit', 'house_icon', 0, { flat: true });
 def(B.APPLE, 'Apple', 'apple', 0, { flat: true, food: 2 });
 def(B.LEMONADE, 'Lemonade', 'lemonade', 0, { flat: true, food: 4 });
 def(B.PIZZA_FOOD, 'Pizza', 'pizza_slice', 0, { flat: true, food: 8 });
+def(B.PORK, 'Porkchop', 'porkchop', 0, { flat: true, food: 4 });
+def(B.BEEF, 'Steak', 'beef', 0, { flat: true, food: 5 });
+def(B.CHICKEN, 'Chicken', 'chicken_leg', 0, { flat: true, food: 3 });
 
 const ORE_TILES = ['ore_copper', 'ore_iron', 'ore_gold', 'ore_ruby', 'ore_sapphire',
   'ore_amethyst', 'ore_lava', 'ore_ice', 'ore_rainbow', 'ore_cosmic'];
@@ -78,15 +97,20 @@ export const SOLID = new Uint8Array(256);   // you bump into it
 export const OPAQUE = new Uint8Array(256);  // hides the face next to it
 export const SHADOW = new Uint8Array(256);  // blocks the sky
 export const GLOW = new Uint8Array(256);    // always bright
+export const PLANT = new Uint8Array(256);   // drawn as a little X, you walk through it
 for (const b of BLOCKS) {
-  if (!b) continue;
-  SOLID[b.id] = 1;
-  OPAQUE[b.id] = b.see ? 0 : 1;
-  SHADOW[b.id] = b.id === B.GLASS ? 0 : 1;
+  if (!b || b.id >= 200) continue;
+  SOLID[b.id] = b.plant ? 0 : 1;
+  OPAQUE[b.id] = b.see || b.plant ? 0 : 1;
+  SHADOW[b.id] = b.id === B.GLASS || b.plant ? 0 : 1;
   GLOW[b.id] = b.glow ? 1 : 0;
+  PLANT[b.id] = b.plant ? 1 : 0;
 }
+export const isLeaves = (id) => id === B.LEAVES || id === B.SPRUCE_LEAVES || id === B.BIRCH_LEAVES;
 
 // Things in your hotbar, in order: food first, then blocks.
-export const PLACEABLE = [B.APPLE, B.LEMONADE, B.PIZZA_FOOD, B.DIRT, B.STONE, B.SAND, B.LOG, B.LEAVES, B.PLANKS, B.COBBLE,
+export const PLACEABLE = [B.APPLE, B.LEMONADE, B.PIZZA_FOOD, B.PORK, B.BEEF, B.CHICKEN,
+  B.DIRT, B.STONE, B.COBBLE, B.SAND, B.GRAVEL, B.SNOW, B.LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.PLANKS,
+  B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.CACTUS, B.POPPY, B.DANDELION,
   B.BRICK, B.GLASS, B.WHITE, B.RED, B.ORANGE, B.YELLOW, B.GREEN, B.BLUE, B.PINK,
-  B.GOLD_BLOCK, B.MONEY_BLOCK, B.LAMP, B.TNT, B.MEGA_TNT, B.HOUSE_KIT];
+  B.GOLD_BLOCK, B.MONEY_BLOCK, B.LAMP, B.BED, B.TNT, B.MEGA_TNT, B.HOUSE_KIT];

@@ -3,22 +3,23 @@ import { B } from './blocks.js';
 
 // Materials to mine. Copper is free. Each new one costs double the last.
 // value = money you get for each block you mine.
-// y = how deep the natural veins are, veins = how many are hidden in the world.
+// y = how deep the veins are (sea level is 40), perChunk = veins in each 16x16 chunk.
+// Until you buy a material, its ore looks like plain stone.
 export const ORES = [
-  { name: 'Copper', color: '#e8793a', value: 1, cost: 0, y: [4, 40], veins: 260 },
-  { name: 'Iron', color: '#e2c3a4', value: 3, cost: 25, y: [4, 36], veins: 190 },
-  { name: 'Gold', color: '#ffd21f', value: 6, cost: 50, y: [4, 30], veins: 150 },
-  { name: 'Ruby', color: '#ff2d55', value: 12, cost: 100, y: [3, 26], veins: 120 },
-  { name: 'Sapphire', color: '#2f7bff', value: 25, cost: 200, y: [3, 22], veins: 100 },
-  { name: 'Amethyst', color: '#b44dff', value: 50, cost: 400, y: [3, 20], veins: 90 },
-  { name: 'Lava Gem', color: '#ff7a00', value: 100, cost: 800, y: [2, 16], veins: 80 },
-  { name: 'Ice Crystal', color: '#8ff4ff', value: 200, cost: 1600, y: [2, 14], veins: 70 },
-  { name: 'Rainbow', color: '#ff66cc', value: 400, cost: 3200, y: [2, 12], veins: 60 },
-  { name: 'Cosmic', color: '#6a5cff', value: 800, cost: 6400, y: [1, 10], veins: 50 },
+  { name: 'Copper', color: '#e8793a', value: 1, cost: 0, y: [5, 72], perChunk: 9 },
+  { name: 'Iron', color: '#e2c3a4', value: 3, cost: 25, y: [5, 60], perChunk: 7 },
+  { name: 'Gold', color: '#ffd21f', value: 6, cost: 50, y: [4, 46], perChunk: 5 },
+  { name: 'Ruby', color: '#ff2d55', value: 12, cost: 100, y: [4, 38], perChunk: 4 },
+  { name: 'Sapphire', color: '#2f7bff', value: 25, cost: 200, y: [3, 32], perChunk: 4 },
+  { name: 'Amethyst', color: '#b44dff', value: 50, cost: 400, y: [3, 28], perChunk: 3 },
+  { name: 'Lava Gem', color: '#ff7a00', value: 100, cost: 800, y: [2, 22], perChunk: 3 },
+  { name: 'Ice Crystal', color: '#8ff4ff', value: 200, cost: 1600, y: [2, 18], perChunk: 2 },
+  { name: 'Rainbow', color: '#ff66cc', value: 400, cost: 3200, y: [2, 14], perChunk: 2 },
+  { name: 'Cosmic', color: '#6a5cff', value: 800, cost: 6400, y: [1, 12], perChunk: 2 },
 ].map((o, i) => ({ ...o, id: B.ORE0 + i, index: i }));
 
-// Money Ore is where diamonds would be: deep down and rare. It is a jackpot.
-export const MONEY_ORE = { y: [1, 11], veins: 70 };
+// Money Ore is where diamonds would be: deep down near the bedrock. It is a jackpot.
+export const MONEY_ORE = { y: [1, 14], perChunk: 2 };
 export function moneyOreValue(oresUnlocked) {
   return Math.max(100, ORES[oresUnlocked - 1].value * 4);
 }
@@ -45,7 +46,8 @@ export const PACKS = [
   { name: 'Glass', give: [[B.GLASS, 16]], cost: 15, icon: B.GLASS },
   { name: 'Color Wool', give: [[B.WHITE, 8], [B.RED, 8], [B.ORANGE, 8], [B.YELLOW, 8], [B.GREEN, 8], [B.BLUE, 8], [B.PINK, 8]], cost: 30, icon: B.RED },
   { name: 'House Kit', give: [[B.HOUSE_KIT, 1]], cost: 60, icon: B.HOUSE_KIT, about: 'Place it and a whole house pops up!' },
-  { name: 'Lamps', give: [[B.LAMP, 8]], cost: 20, icon: B.LAMP },
+  { name: 'Lamps', give: [[B.LAMP, 8]], cost: 20, icon: B.LAMP, about: 'Light up the dark. Zombies stay away from lamps.' },
+  { name: 'Bed', give: [[B.BED, 1]], cost: 25, icon: B.BED, about: 'Sleep through the night. You wake up here after you die.' },
   { name: 'Gold Blocks', give: [[B.GOLD_BLOCK, 8]], cost: 60, icon: B.GOLD_BLOCK },
   { name: 'Money Blocks', give: [[B.MONEY_BLOCK, 8]], cost: 150, icon: B.MONEY_BLOCK },
 ];

@@ -29,6 +29,7 @@
   <div id="big-text"></div>
   <div id="water-tint"></div>
   <div id="hurt-flash"></div>
+  <div id="sleep-fade"><div>Zzz...</div></div>
 </div>
 
 <div id="touch" class="hidden">
@@ -48,9 +49,9 @@
     <div class="how">
       <div><b>WASD</b> walk &nbsp; <b>SPACE</b> jump &nbsp; <b>SHIFT</b> run</div>
       <div><b>HOLD LEFT CLICK</b> mine &nbsp; <b>RIGHT CLICK</b> build</div>
-      <div><b>B</b> shop &nbsp; <b>1-9</b> or <b>wheel</b> pick a block &nbsp; <b>F</b> eat &nbsp; <b>M</b> music</div>
+      <div><b>B</b> shop &nbsp; <b>E</b> inventory &nbsp; <b>1-9</b> or <b>wheel</b> pick a block &nbsp; <b>F</b> eat</div>
     </div>
-    <p class="tip">Money Ore is where diamonds would be. Dig DEEP in the caves to find it! Watch out for zombies at night. Your game saves by itself.</p>
+    <p class="tip">A HUGE island to explore. Money Ore is where diamonds would be: dig DEEP in the caves to find it! Watch out for zombies at night. Your game saves by itself.</p>
     <p id="loading" class="tip">Digging the caves...</p>
   </div>
 </div>
@@ -66,16 +67,18 @@
     <div class="row">
       <button id="music-btn" class="btn">MUSIC: ON</button>
       <button id="jump-btn" class="btn">AUTO-JUMP: ON</button>
+      <button id="view-btn" class="btn">VIEW: FAR</button>
     </div>
     <div class="row">
       <button id="reset-btn" class="btn red">NEW WORLD</button>
     </div>
     <div class="how small-how">
-      <div>Mine ore in <b>THE MINE</b> or in the caves. Ore turns into money!</div>
+      <div>Explore! Ore in caves and cliffs turns into money. Deeper ore is worth more.</div>
       <div>Buy new materials, faster pickaxes, food and TNT in the <b>SHOP</b>.</div>
       <div>Every upgrade costs <b>DOUBLE</b> the one before.</div>
       <div>Keep your <b>hunger bar</b> full: right-click food or press <b>F</b>. If it runs out, you lose hearts!</div>
-      <div><b>ZOMBIES</b> come out at night. Town is safe, and they are scared of lamps. Hit them for money!</div>
+      <div><b>ZOMBIES</b> come out at night. They are scared of lamps. Hit them for money! Sleep in a <b>bed</b> to skip the night.</div>
+      <div>Pigs, cows and chickens give you food. Falling a long way hurts!</div>
     </div>
   </div>
 </div>
@@ -97,6 +100,17 @@
       <button id="confirm-yes" class="btn red">YES</button>
       <button id="confirm-no" class="btn green">NO WAY</button>
     </div>
+  </div>
+</div>
+
+<div id="inventory" class="screen hidden">
+  <div class="panel inv-panel">
+    <div class="shop-head">
+      <h2>INVENTORY</h2>
+      <div class="inv-tip">Click something to hold it</div>
+      <button id="inv-close" class="btn red small" aria-label="Close">X</button>
+    </div>
+    <div id="inv-grid"></div>
   </div>
 </div>
 

@@ -226,6 +226,116 @@ export function buildAtlas() {
         px(cx, cy, [190, 40, 40]); px(cx + 1, cy, [190, 40, 40]); px(cx, cy + 1, [170, 30, 30]); px(cx + 1, cy + 1, [190, 40, 40]);
       }
     },
+    snow() { fill([240, 246, 252], 10); speck([214, 226, 240], 0.12, 6); },
+    snow_side() {
+      painters.dirt();
+      for (let x = 0; x < TS; x++) {
+        const gh = 3 + (r() < 0.5 ? 1 : 0);
+        for (let y = 0; y < gh; y++) px(x, y, jit([240, 246, 252], 8));
+      }
+    },
+    spruce_log() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) px(x, y, jit(x % 4 === 0 ? [46, 30, 18] : [70, 48, 28], 10));
+    },
+    spruce_leaves() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        if (r() < 0.18) { px(x, y, [0, 0, 0], 0); continue; }
+        px(x, y, jit(r() < 0.3 ? [30, 74, 44] : [44, 98, 58], 18));
+      }
+    },
+    birch_log() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const mark = (y * 7 + (x >> 2) * 5) % 11 === 0 && r() < 0.8;
+        px(x, y, mark ? [40, 40, 40] : jit([226, 224, 214], 10));
+      }
+    },
+    birch_leaves() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        if (r() < 0.2) { px(x, y, [0, 0, 0], 0); continue; }
+        px(x, y, jit(r() < 0.25 ? [90, 150, 60] : [120, 178, 80], 22));
+      }
+    },
+    cactus_side() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const edge = x === 0 || x === 15;
+        const rib = x === 4 || x === 11;
+        px(x, y, edge ? [30, 90, 30] : rib ? [40, 120, 40] : jit([70, 160, 60], 12));
+        if ((x === 2 || x === 13) && y % 4 === 1) px(x, y, [230, 230, 200]);
+      }
+    },
+    cactus_top() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const edge = x === 0 || x === 15 || y === 0 || y === 15;
+        px(x, y, edge ? [30, 90, 30] : jit((x + y) % 4 === 0 ? [90, 170, 70] : [70, 150, 60], 10));
+      }
+    },
+    tall_grass() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) px(x, y, [0, 0, 0], 0);
+      for (let b = 0; b < 7; b++) {
+        let x = 2 + b * 2 + ((r() * 2) | 0), top = 3 + ((r() * 8) | 0);
+        for (let y = 15; y >= top; y--) {
+          px(x, y, jit(y < top + 2 ? [120, 196, 80] : [80, 160, 54], 14));
+          if (y % 4 === 0 && r() < 0.5) x += r() < 0.5 ? -1 : 1;
+        }
+      }
+    },
+    poppy() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) px(x, y, [0, 0, 0], 0);
+      for (let y = 8; y < 16; y++) px(7, y, [60, 140, 40]);
+      px(6, 11, [60, 140, 40]); px(5, 10, [60, 140, 40]); px(8, 12, [60, 140, 40]); px(9, 11, [60, 140, 40]);
+      for (let y = 3; y < 8; y++) for (let x = 5; x < 10; x++) if (!((x === 5 || x === 9) && (y === 3 || y === 7))) px(x, y, jit([220, 30, 30], 14));
+      px(7, 5, [40, 20, 10]);
+    },
+    dandelion() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) px(x, y, [0, 0, 0], 0);
+      for (let y = 9; y < 16; y++) px(8, y, [70, 150, 40]);
+      px(7, 13, [70, 150, 40]); px(9, 12, [70, 150, 40]);
+      for (let y = 5; y < 9; y++) for (let x = 6; x < 11; x++) if (!((x === 6 || x === 10) && (y === 5 || y === 8))) px(x, y, jit([255, 220, 40], 12));
+    },
+    bed_top() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const pillow = y < 5 && x > 1 && x < 14;
+        const edge = x === 0 || x === 15 || y === 0 || y === 15;
+        px(x, y, edge ? [130, 90, 50] : pillow ? jit([240, 240, 240], 6) : jit([200, 40, 46], 10));
+      }
+    },
+    bed_side() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        if (y < 6) px(x, y, jit([200, 40, 46], 10));
+        else if (y < 9) px(x, y, jit([236, 236, 236], 6));
+        else px(x, y, (x < 3 || x > 12) ? jit([130, 90, 50], 10) : jit([160, 116, 66], 10));
+      }
+    },
+    gravel() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const k = r();
+        px(x, y, jit(k < 0.3 ? [110, 104, 100] : k < 0.6 ? [140, 134, 130] : k < 0.85 ? [160, 150, 144] : [96, 90, 90], 12));
+      }
+    },
+    porkchop() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const d = Math.hypot((x - 7) * 0.9, (y - 8) * 1.2);
+        if (d < 6) px(x, y, d > 5 ? [250, 230, 220] : jit([240, 130, 140], 12));
+        else px(x, y, [0, 0, 0], 0);
+      }
+      px(12, 4, [240, 236, 226]); px(13, 3, [240, 236, 226]);
+    },
+    beef() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const d = Math.hypot((x - 7.5) * 0.85, (y - 8) * 1.15);
+        if (d < 6.3) px(x, y, d > 5.2 ? [120, 60, 30] : jit((x + y) % 5 === 0 ? [200, 130, 110] : [160, 70, 50], 12));
+        else px(x, y, [0, 0, 0], 0);
+      }
+    },
+    chicken_leg() {
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const d = Math.hypot(x - 6, y - 6);
+        if (d < 4.6) px(x, y, jit(d > 3.6 ? [170, 100, 40] : [220, 150, 70], 12));
+        else px(x, y, [0, 0, 0], 0);
+      }
+      for (let i = 0; i < 5; i++) { px(9 + i, 9 + i, [240, 236, 226]); px(10 + i, 9 + i, [240, 236, 226]); }
+      px(14, 14, [255, 255, 255]); px(13, 14, [255, 255, 255]);
+    },
     lamp() {
       for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
         const edge = x === 0 || y === 0 || x === 15 || y === 15;
@@ -391,7 +501,7 @@ export function blockIcon(id, size = 48) {
   const key = id + ':' + size;
   if (iconCache.has(key)) return iconCache.get(key);
   const b = BLOCKS[id];
-  if (b.flat) return tileIcon(b.tiles[0]);
+  if (b.flat || b.plant) return tileIcon(b.tiles[0]);
   const c = document.createElement('canvas');
   c.width = c.height = 48;
   const g = c.getContext('2d');

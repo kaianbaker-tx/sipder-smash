@@ -148,6 +148,23 @@ export function zombieDie() {
   tone(130, t, 0.5, 'sawtooth', 0.16, 50);
   noise(t, 0.3, 500, 0.7, 0.3);
 }
+export function oink() {
+  const t = now();
+  tone(320, t, 0.12, 'square', 0.08, 220);
+  tone(300, t + 0.13, 0.14, 'square', 0.08, 200);
+}
+export function moo() {
+  const t = now();
+  tone(140, t, 0.9, 'sawtooth', 0.12, 105);
+}
+export function cluck() {
+  const t = now();
+  for (let i = 0; i < 3; i++) tone(900 + i * 80, t + i * 0.08, 0.05, 'square', 0.06, 600);
+}
+export function sleep() {
+  const t = now();
+  [523, 440, 392, 330].forEach((f, i) => tone(f, t + i * 0.25, 0.5, 'triangle', 0.15));
+}
 export function click() {
   tone(880, now(), 0.04, 'square', 0.06);
 }

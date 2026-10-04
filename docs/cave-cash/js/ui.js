@@ -41,6 +41,16 @@ export class UI {
     this.barKey = '';
     this.heldId = -1;
     $('shop-close').onclick = () => this.hooks.closeShop();
+    this.invOpen = false;
+    $('inv-grid').addEventListener('click', (e) => {
+      const b = e.target.closest('.inv-slot[data-i]');
+      if (!b) return;
+      sfx.click();
+      this.sel = +b.dataset.i;
+      this.hotKey = '';
+      this.hooks.closeInv();
+    });
+    $('inv-close').onclick = () => this.hooks.closeInv();
     document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => { sfx.click(); this.showTab(t.dataset.tab); }));
     $('shop-list').addEventListener('click', (e) => this.shopClick(e));
     $('x2-btn').onclick = (e) => { if (!this.game.buyDouble()) this.shake(e.currentTarget); };
@@ -140,14 +150,35 @@ export class UI {
     const el = $('look-label');
     if (!hit) { el.innerHTML = ''; return; }
     const g = this.game;
-    const region = world.regionAt(hit.x, hit.y, hit.z);
-    if (region === 2) { el.innerHTML = 'SHOP &nbsp;<span class="cash">right-click or press B</span>'; return; }
     const vis = world.visual[hit.id];
     const bd = BLOCKS[vis];
     let extra = '';
     if (hit.id === B.MONEY_ORE) extra = `JACKPOT ${money(moneyOreValue(g.s.ores) * g.mult)}!`;
     else if (bd.ore !== undefined) extra = money(ORES[bd.ore].value * g.mult);
+    if (bd.bed) extra = 'right-click to sleep';
     el.innerHTML = `${bd.name}${extra ? ' &nbsp;<span class="cash">' + extra + '</span>' : ''}`;
+  }
+
+  // ---------- Inventory (E), like Minecraft ----------
+  openInv() {
+    this.invOpen = true;
+    $('inventory').classList.remove('hidden');
+    this.renderInv();
+  }
+
+  closeInv() {
+    this.invOpen = false;
+    $('inventory').classList.add('hidden');
+  }
+
+  renderInv() {
+    const own = this.owned(), inv = this.game.s.inv;
+    let html = '';
+    own.forEach((id, i) => {
+      html += `<button class="inv-slot${i === this.sel ? ' on' : ''}" data-i="${i}" title="${BLOCKS[id].name}"><img alt="" src="${blockIcon(id)}"><span class="n">${inv[id]}</span><span class="inv-name">${BLOCKS[id].name}</span></button>`;
+    });
+    for (let i = own.length; i < Math.max(27, Math.ceil(own.length / 9) * 9); i++) html += '<div class="inv-slot empty"></div>';
+    $('inv-grid').innerHTML = html;
   }
 
   // ---------- Hotbar ----------

@@ -122,32 +122,6 @@ function spriteFrom(canvas, height) {
   return s;
 }
 
-export class Sign {
-  constructor(scene, x, y, z, lines, opts = {}) {
-    this.scene = scene;
-    this.opts = opts;
-    this.height = opts.height || 1.3;
-    this.sprite = null;
-    this.key = '';
-    this.pos = new THREE.Vector3(x, y, z);
-    this.set(lines);
-  }
-  set(lines, pos) {
-    if (pos) this.pos.set(pos.x, pos.y, pos.z);
-    const key = lines.join('|');
-    if (key === this.key) { if (this.sprite) this.sprite.position.copy(this.pos); return; }
-    this.key = key;
-    if (this.sprite) {
-      this.scene.remove(this.sprite);
-      this.sprite.material.map.dispose();
-      this.sprite.material.dispose();
-    }
-    this.sprite = spriteFrom(textCanvas(lines, { bg: '#fff6d6', color: '#1b0d2e', color2: '#1b0d2e', stroke: '#fff6d6', ...this.opts }), this.height * (lines.length > 1 ? 1.35 : 1));
-    this.sprite.position.copy(this.pos);
-    this.scene.add(this.sprite);
-  }
-}
-
 // "+$12" numbers that float up and fade.
 export class Popups {
   constructor(scene) {
@@ -308,16 +282,20 @@ export function makeClouds(scene) {
   const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, fog: false });
   const box = new THREE.BoxGeometry(1, 1, 1);
   const count = 70;
-  const inst = new THREE.InstancedMesh(box, mat, count);
+  // One 640x640 patch of clouds, copied 2x2 so it can repeat forever.
+  const inst = new THREE.InstancedMesh(box, mat, count * 4);
   const m = new THREE.Matrix4();
   for (let i = 0; i < count; i++) {
-    const w = 8 + r() * 22, d = 6 + r() * 16;
-    m.makeScale(w, 2.5, d);
-    m.setPosition(-200 + r() * 520, 0, -200 + r() * 520);
-    inst.setMatrixAt(i, m);
+    const w = 10 + r() * 26, d = 8 + r() * 18, x = r() * 640, z = r() * 640;
+    for (let k = 0; k < 4; k++) {
+      m.makeScale(w, 3, d);
+      m.setPosition(x + (k & 1) * 640, 0, z + (k >> 1) * 640);
+      inst.setMatrixAt(i * 4 + k, m);
+    }
   }
+  inst.frustumCulled = false;
   g.add(inst);
-  g.position.y = 78;
+  g.position.y = 112;
   scene.add(g);
   return g;
 }

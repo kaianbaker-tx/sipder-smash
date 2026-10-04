@@ -327,3 +327,22 @@ body.touch #crosshair { opacity: 0.8; }
   #t-build { right: 16px; bottom: 170px; width: 72px; height: 72px; font-size: 15px; }
   #t-jump { right: 16px; bottom: 76px; width: 72px; height: 72px; font-size: 15px; }
 }
+
+/* ---------- Inventory (like Minecraft) ---------- */
+.inv-panel { max-width: 640px; background: #c6c6c6; border-color: #1b1b1b; box-shadow: 0 10px 0 #1b1b1b; }
+.inv-panel h2 { color: #3f3f3f; text-shadow: none; }
+.inv-tip { flex: 1; text-align: right; color: #3f3f3f; font-size: 15px; }
+#inv-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin-top: 12px; }
+.inv-slot {
+  position: relative; aspect-ratio: 1; padding: 0; cursor: pointer;
+  background: #8b8b8b; border: 3px solid; border-color: #373737 #ffffff #ffffff #373737;
+  display: flex; align-items: center; justify-content: center; font: inherit;
+}
+.inv-slot img { width: 70%; height: 70%; image-rendering: pixelated; }
+.inv-slot .n { position: absolute; right: 3px; bottom: 0; font-size: 15px; color: #fff; text-shadow: 2px 2px 0 #3f3f3f; }
+.inv-slot .inv-name { display: none; }
+.inv-slot:hover { background: #a8a8a8; }
+.inv-slot.on { outline: 3px solid #fff; outline-offset: -1px; }
+.inv-slot.empty { cursor: default; }
+#sleep-fade { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity 1.2s; display: flex; align-items: center; justify-content: center; font-size: 60px; color: #fff; pointer-events: none; }
+#sleep-fade.on { opacity: 1; }

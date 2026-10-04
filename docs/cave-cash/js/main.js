@@ -1,18 +1,16 @@
 // CAVE CASH: starts everything and runs the game every frame.
 import * as THREE from '../lib/three.min.js';
 import { buildAtlas } from './atlas.js';
-import { B, BLOCKS, SOLID } from './blocks.js';
+import { B, BLOCKS, SOLID, PLANT } from './blocks.js';
 import { ORES, PICKS, money } from './data.js';
-import { World, W, D, SEA, GROUND, isProtected, R } from './world.js';
-import { buildTown, buildCave, SPAWN, MINE, SHOP, CAVE } from './town.js';
+import { World, W, D, SEA, BIOME, BIOME_NAMES } from './world.js';
 import { Player, EYE } from './player.js';
 import { Game } from './game.js';
 import { UI } from './ui.js';
-import { Bits, Popups, Sign, Target, Hand, makeSky, makeClouds, makeWater } from './fx.js';
-import { DayNight } from './daynight.js';
-import { Zombies } from './zombies.js';
+import { Bits, Popups, Target, Hand, makeSky, makeClouds, makeWater } from './fx.js';
+import { DayNight, CYCLE } from './daynight.js';
+import { Mobs } from './mobs.js';
 import { setupTouch } from './touch.js';
-import { rng } from './noise.js';
 import * as sfx from './sound.js';
 
 const SEED = 20260928;
@@ -50,12 +48,11 @@ atlasTex.colorSpace = THREE.SRGBColorSpace;
 const blockMat = new THREE.MeshBasicMaterial({ map: atlasTex, vertexColors: true, alphaTest: 0.5 });
 
 const world = new World(SEED);
-world.generate();
-buildTown(world, rng(SEED + 5));
-buildCave(world, rng(SEED + 9));
-world.finish();
+const SPAWN = world.findSpawn();
 world.setUnlocked(1);
 scene.add(world.group);
+let viewFar = true;
+const view = () => (viewFar ? 6 : 4);   // how many chunks you can see
 
 const ui = new UI();
 const game = new Game(world, ui);
@@ -70,16 +67,11 @@ const bits = new Bits(scene);
 const popups = new Popups(scene);
 const target = new Target(scene, atlasTex);
 const hand = new Hand();
-const zombies = new Zombies(world, scene, bits, sfx);
+const mobs = new Mobs(world, scene, bits, sfx);
 let wasNight = false;
 
-// Signs.
-new Sign(scene, (MINE.x0 + MINE.x1) / 2, GROUND + 7, MINE.z0 + 1, ['THE MINE', 'Ore grows back!'], { height: 1.8 });
-new Sign(scene, CAVE.x - 1, GROUND + 4.5, (CAVE.z0 + CAVE.z1 + 1) / 2, ['MONEY CAVE', 'Dig for Money Ore!'], { height: 1.6, bg: '#27c95a', stroke: '#27c95a', color: '#fff6d6', color2: '#fff6d6', border: '#1b0d2e' });
-new Sign(scene, SHOP.x0 + SHOP.w / 2, GROUND + 11, SHOP.z0 + SHOP.d / 2, ['SHOP', 'Press B'], { height: 2, bg: '#ffd21f', stroke: '#ffd21f' });
-
-// Build all the shapes now (the title screen shows the world).
-world.remesh(blockMat, Infinity);
+// Make the land around the start right away (the title screen shows it).
+world.prepare(SPAWN.x, SPAWN.z, 3, blockMat);
 
 // ---------- Input ----------
 const input = { forward: 0, right: 0, jump: false, sprint: false, mine: false, build: false };
@@ -94,12 +86,13 @@ function lookBy(dx, dy, sens = mouseSens) {
   player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - dy * sens));
 }
 
+const menuOpen = () => ui.shopOpen || ui.invOpen;
 document.addEventListener('mousemove', (e) => {
-  if (state === 'play' && locked && !ui.shopOpen) lookBy(e.movementX, e.movementY);
+  if (state === 'play' && locked && !menuOpen()) lookBy(e.movementX, e.movementY);
 });
 document.addEventListener('pointerlockchange', () => {
   locked = document.pointerLockElement === canvas;
-  if (!locked && state === 'play' && !ui.shopOpen && !touchMode) pause();
+  if (!locked && state === 'play' && !menuOpen() && !touchMode) pause();
 });
 document.addEventListener('pointerlockerror', () => {
   locked = false;
@@ -113,7 +106,7 @@ function lock() {
 }
 
 canvas.addEventListener('mousedown', (e) => {
-  if (state !== 'play' || ui.shopOpen || touchMode) return;
+  if (state !== 'play' || menuOpen() || touchMode) return;
   if (!locked) { lock(); return; }
   if (e.button === 0) input.mine = true;
   if (e.button === 2) { input.build = true; buildTimer = 0.25; tryBuild(); }
@@ -128,10 +121,12 @@ canvas.addEventListener('wheel', (e) => { if (state === 'play') ui.scroll(e.delt
 window.addEventListener('keydown', (e) => {
   keys.add(e.code);
   if (state !== 'play') return;
-  if (e.code === 'KeyB' || e.code === 'KeyE') { ui.shopOpen ? closeShop() : openShop(); }
+  if (e.code === 'KeyB' && !ui.invOpen) { ui.shopOpen ? closeShop() : openShop(); }
+  if (e.code === 'KeyE' && !ui.shopOpen) { ui.invOpen ? closeInv() : openInv(); }
   if (e.code === 'Escape' && ui.shopOpen) closeShop(true);
+  if (e.code === 'Escape' && ui.invOpen) closeInv(true);
   if (e.code === 'KeyM') toggleMusic();
-  if (e.code === 'KeyF' && !ui.shopOpen) game.eat();
+  if (e.code === 'KeyF' && !menuOpen()) game.eat();
   if (e.code.startsWith('Digit')) {
     const n = +e.code.slice(5);
     if (n >= 1) ui.pick(n - 1);
@@ -164,12 +159,14 @@ function applySettings(s) {
   if (!s) return;
   sfx.setMusic(s.music !== false);
   player.autoJump = s.autoJump !== false;
+  viewFar = s.viewFar !== false;
   updateSettingButtons();
 }
-function settings() { return { music: sfx.isMusicOn(), autoJump: player.autoJump }; }
+function settings() { return { music: sfx.isMusicOn(), autoJump: player.autoJump, viewFar }; }
 function updateSettingButtons() {
   $('music-btn').textContent = 'MUSIC: ' + (sfx.isMusicOn() ? 'ON' : 'OFF');
   $('jump-btn').textContent = 'AUTO-JUMP: ' + (player.autoJump ? 'ON' : 'OFF');
+  $('view-btn').textContent = 'VIEW: ' + (viewFar ? 'FAR' : 'NEAR');
 }
 function toggleMusic() {
   sfx.setMusic(!sfx.isMusicOn());
@@ -210,20 +207,32 @@ function askConfirm(title, text, action) {
 
 // Put the world back the way it was made, with nothing bought.
 function resetWorld() {
-  zombies.clear();
+  mobs.clear();
+  for (const t of lit) { scene.remove(t.mesh); t.mesh.material.dispose(); }
+  lit.length = 0;
   game.s = Game.fresh();
-  game.regrow = [];
-  world.resetToBase();
+  world.reset();
   world.setUnlocked(1);
   ui.sel = 0;
   ui.lastIncome = -1;
   ui.changed();
 }
 
+// Wake up at your bed if you have one, or at the start.
 function spawnPlayer() {
-  player.pos.x = SPAWN.x; player.pos.y = SPAWN.y; player.pos.z = SPAWN.z;
+  let p = SPAWN;
+  const bed = game.s.spawn;
+  if (bed) {
+    world.prepare(bed[0], bed[2], 1, blockMat);
+    if (world.get(Math.floor(bed[0]), Math.floor(bed[1]) - 1, Math.floor(bed[2])) === B.BED) p = { x: bed[0], y: bed[1], z: bed[2] };
+    else { game.s.spawn = null; ui.toast('Your bed was gone, so you woke up at the start.'); }
+  }
+  world.prepare(p.x, p.z, 2, blockMat);
+  player.pos.x = p.x; player.pos.y = p.y; player.pos.z = p.z;
   player.vel.x = player.vel.y = player.vel.z = 0;
   player.yaw = 0; player.pitch = -0.05;
+  player.fallTop = null; player.fallHurt = 0;
+  player.unstick();
 }
 
 function showGame() {
@@ -240,27 +249,34 @@ function showGame() {
 function startGame(n) {
   sfx.startAudio();
   slot = n;
-  if (worldUsed) resetWorld();
+  resetWorld();          // the title screen already made some land; start clean
   worldUsed = true;
-  spawnPlayer();
   const data = Game.loadData(n);
-  zombies.clear();
+  mobs.clear();
   if (data) {
-    game.restore(data);
-    if (data.pos) {
+    const same = game.restore(data);
+    spawnPlayer();
+    if (same && data.pos) {
       [player.pos.x, player.pos.y, player.pos.z, player.yaw, player.pitch] = data.pos;
+      world.prepare(player.pos.x, player.pos.z, 2, blockMat);
       player.unstick();
     }
     ui.toast(`Playing SAVE ${n}`, 'good');
+    if (!same) setTimeout(() => ui.toast('The island got WAY bigger! You kept your money and your stuff.', 'good'), 600);
   } else {
-    setTimeout(() => ui.toast('Mine the orange Copper Ore in THE MINE. It turns into money!'), 800);
-    setTimeout(() => ui.toast('Then press B to open the SHOP.'), 4200);
-    setTimeout(() => ui.toast('Brave? Go down the MONEY CAVE to find Money Ore!'), 8000);
-    setTimeout(() => ui.toast('Watch your hunger bar! Right-click an apple to eat it.'), 12000);
+    spawnPlayer();
+    tutorial();
   }
   wasNight = game.night;
   showGame();
   save();
+}
+
+function tutorial() {
+  setTimeout(() => ui.toast('Explore! Ore in caves and cliffs turns into money.'), 800);
+  setTimeout(() => ui.toast('Orange specks are Copper Ore. Press B to open the SHOP.'), 4200);
+  setTimeout(() => ui.toast('Build your House Kit before night: pick it, aim at the ground, right-click!'), 8000);
+  setTimeout(() => ui.toast('Hungry? Hit pigs, cows and chickens for food. Press E for your inventory.'), 12000);
 }
 
 // Back to the title screen to pick another save file.
@@ -280,6 +296,7 @@ $('pause-btn').onclick = () => { sfx.click(); ui.shopOpen ? closeShop(true) : pa
 $('shop-btn').onclick = () => { sfx.click(); ui.shopOpen ? closeShop() : openShop(); };
 $('music-btn').onclick = () => toggleMusic();
 $('jump-btn').onclick = () => { player.autoJump = !player.autoJump; updateSettingButtons(); Game.saveSettings(settings()); sfx.click(); };
+$('view-btn').onclick = () => { viewFar = !viewFar; updateSettingButtons(); Game.saveSettings(settings()); sfx.click(); };
 $('save-btn').onclick = () => {
   const ok = save();
   sfx.coin();
@@ -296,7 +313,8 @@ $('reset-btn').onclick = () => {
     resetWorld();
     spawnPlayer();
     showGame();
-    ui.toast('A brand new world! Mine Copper Ore in THE MINE.', 'good');
+    ui.toast('A brand new world! Go explore!', 'good');
+    tutorial();
     save();
   });
 };
@@ -323,6 +341,17 @@ function resume() {
   lock();
 }
 ui.hooks.closeShop = () => closeShop();
+ui.hooks.closeInv = () => closeInv();
+function openInv() {
+  ui.openInv();
+  input.mine = input.build = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function closeInv(noLock) {
+  ui.closeInv();
+  if (!noLock) lock();
+  else if (!touchMode) pause();
+}
 function openShop(tab) {
   ui.openShop(tab);
   input.mine = input.build = false;
@@ -346,12 +375,13 @@ function tryBuild() {
   // Holding food? Right-click eats it, like Minecraft.
   if (held && BLOCKS[held].food) { input.build = false; game.eat(held); return; }
   if (!hit) return;
-  const region = world.regionAt(hit.x, hit.y, hit.z);
-  if (region === R.SHOP) { input.build = false; openShop('ores'); return; }
+  if (hit.id === B.BED) { input.build = false; sleep(hit.x, hit.y, hit.z); return; }
   if (held === B.HOUSE_KIT) { input.build = false; placeHouse(); return; }
-  const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
+  // Tall grass and flowers get replaced, like in Minecraft.
+  const swap = PLANT[hit.id] === 1;
+  const x = swap ? hit.x : hit.x + hit.nx, y = swap ? hit.y : hit.y + hit.ny, z = swap ? hit.z : hit.z + hit.nz;
   if (!world.inside(x, y, z) || SOLID[world.get(x, y, z)]) return;
-  if (isProtected(world.regionAt(x, y, z))) { ui.toast("Can't build here!", 'bad'); return; }
+  if (held && PLANT[held] && !SOLID[world.get(x, y - 1, z)]) return;
   if (!held) { if (warnTimer <= 0) { ui.toast('No blocks yet! Mine some, or buy them in the SHOP.'); warnTimer = 2; } return; }
   if (player.overlapsBlock(x, y, z)) return;
   world.set(x, y, z, held);
@@ -362,12 +392,14 @@ function tryBuild() {
 
 // A whole house in one click! The door faces you.
 function placeHouse() {
-  if (!hit || hit.ny !== 1) { ui.toast('Aim at the ground to place your house!', 'bad'); return; }
+  // Aiming at tall grass or a flower counts as aiming at the ground under it.
+  const ground = hit && PLANT[hit.id] ? { x: hit.x, y: hit.y - 1, z: hit.z, ny: 1 } : hit;
+  if (!ground || ground.ny !== 1) { ui.toast('Aim at the ground to place your house!', 'bad'); return; }
   const fx = Math.abs(Math.sin(player.yaw)) > Math.abs(Math.cos(player.yaw)) ? -Math.sign(Math.sin(player.yaw)) : 0;
   const fz = fx ? 0 : -Math.sign(Math.cos(player.yaw));
   const rx = -fz, rz = fx;               // to the right
-  const base = hit.y + 1;
-  let ox = hit.x, oz = hit.z;            // middle of the front wall
+  const base = ground.y + 1;
+  let ox = ground.x, oz = ground.z;      // middle of the front wall
   const cell = (i, j) => [ox + i * rx + j * fx, oz + i * rz + j * fz];
   // Do not build on top of the player.
   for (let t = 0; t < 3; t++) {
@@ -382,7 +414,7 @@ function placeHouse() {
   for (let i = -3; i <= 3; i++) for (let j = 0; j <= 6; j++) {
     const [x, z] = cell(i, j);
     for (let y = base - 1; y < base + 7; y++) {
-      if (!world.inside(x, y, z) || isProtected(world.regionAt(x, y, z)) || world.get(x, y, z) === B.BEDROCK) {
+      if (!world.inside(x, y, z) || world.get(x, y, z) === B.BEDROCK) {
         ui.toast('No room for a house here. Try an open spot!', 'bad');
         sfx.nope();
         return;
@@ -414,13 +446,13 @@ function placeHouse() {
   // Door, bed and a lamp.
   const put = (i, j, h, id) => { const [x, z] = cell(i, j); world.set(x, base + h, z, id); };
   put(0, 0, 0, 0); put(0, 0, 1, 0);
-  put(-2, 5, 0, B.WHITE); put(-2, 4, 0, B.RED); put(-2, 3, 0, B.RED);
+  put(-2, 5, 0, B.BED); put(-2, 4, 0, B.BED);
   put(2, 5, 0, B.LAMP);
   put(2, 1, 0, B.LOG);
   player.unstick();
-  bits.burst(hit.x, base, hit.z, B.PLANKS, 30);
+  bits.burst(ground.x, base, ground.z, B.PLANKS, 30);
   sfx.levelUp();
-  ui.toast('You built a house! Walk in through the door.', 'good');
+  ui.toast('You built a house! Right-click the bed to sleep through the night.', 'good');
   ui.changed();
 }
 
@@ -513,6 +545,7 @@ function died(why) {
 $('respawn-btn').onclick = () => {
   sfx.click();
   $('dead').classList.add('hidden');
+  mobs.clear();
   spawnPlayer();
   state = 'play';
   lock();
@@ -520,28 +553,36 @@ $('respawn-btn').onclick = () => {
 };
 $('t-eat').addEventListener('pointerdown', (e) => { e.preventDefault(); if (state === 'play') game.eat(); });
 
-// ---------- Fighting zombies ----------
+// ---------- Fighting ----------
 let attackCool = 0;
-let zombieHit = null;
+let mobHit = null;
 function zombieMoney() { return Math.max(10, ORES[game.s.ores - 1].value * 3); }
+const MOB_NAMES = { zombie: 'Zombie', pig: 'Pig', cow: 'Cow', chicken: 'Chicken' };
 
 function updateFight(dt) {
   attackCool -= dt;
-  zombieHit = zombies.hitTest(eye, dir, 4);
-  if (zombieHit && hit && hit.t < zombieHit.t) zombieHit = null;
-  if (!zombieHit || !input.mine) return !!zombieHit;
+  mobHit = mobs.hitTest(eye, dir, 4);
+  if (mobHit && hit && hit.t < mobHit.t) mobHit = null;
+  if (!mobHit || !input.mine) return !!mobHit;
   mining = null;
   if (attackCool > 0) return true;
   attackCool = 0.4;
   hand.swing = 0.25;
-  const z = zombieHit.zombie;
-  if (zombies.damage(z, 3 + game.s.pick * 1.2, dir)) {
-    const p = z.body.pos;
-    const cash = game.earn(zombieMoney());
-    game.s.kills++;
-    popups.add('+' + money(cash), p.x, p.y + 2.2, p.z, '#ffd21f', true);
-    sfx.coin(true);
-    if (Math.random() < 0.35) { game.give(B.APPLE, 1); ui.toast('The zombie dropped an apple!'); }
+  const m = mobHit.mob;
+  if (mobs.damage(m, 3 + game.s.pick * 1.2, dir)) {
+    const p = m.body.pos;
+    if (m.k.hostile) {
+      const cash = game.earn(zombieMoney());
+      game.s.kills++;
+      popups.add('+' + money(cash), p.x, p.y + 2.2, p.z, '#ffd21f', true);
+      sfx.coin(true);
+      if (Math.random() < 0.35) { game.give(B.APPLE, 1); ui.toast('The zombie dropped an apple!'); }
+    } else {
+      const n = m.kind === 'cow' ? 2 : 1;
+      game.give(m.k.food, n);
+      popups.add(`+${n} ${BLOCKS[m.k.food].name}`, p.x, p.y + 1.4, p.z, '#ffe0a0');
+      sfx.place();
+    }
     ui.changed();
   }
   return true;
@@ -557,6 +598,44 @@ function zombieHitsPlayer(dmg, z) {
   if (game.hurt(dmg)) died('A zombie got you! Stay near lamps at night.');
 }
 
+// ---------- Sleeping ----------
+let sleepTimer = 0;
+function sleep(x, y, z) {
+  game.s.spawn = [x + 0.5, y + 1, z + 0.5];
+  if (!game.night) {
+    ui.toast('Bed set! You will wake up here. You can only sleep at night.', 'good');
+    save();
+    return;
+  }
+  if (mobs.zombiesNear(player.pos, 10)) { ui.toast("You can't sleep now, there are zombies nearby!", 'bad'); return; }
+  state = 'sleep';
+  sleepTimer = 2.6;
+  input.mine = input.build = false;
+  $('sleep-fade').classList.add('on');
+  sfx.sleep();
+}
+
+function updateSleep(dt) {
+  sleepTimer -= dt;
+  if (sleepTimer < 1.3 && game.night) game.s.clock = 0.995 * CYCLE;
+  if (sleepTimer > 0) return;
+  $('sleep-fade').classList.remove('on');
+  state = 'play';
+  ui.toast('Good morning!', 'good');
+  save();
+}
+
+// Touching a cactus hurts.
+let cactusClock = 0;
+function touchingCactus() {
+  const p = player.pos;
+  for (let y = Math.floor(p.y); y <= Math.floor(p.y + 1.7); y++)
+    for (let z = Math.floor(p.z - 0.36); z <= Math.floor(p.z + 0.36); z++)
+      for (let x = Math.floor(p.x - 0.36); x <= Math.floor(p.x + 0.36); x++)
+        if (world.get(x, y, z) === B.CACTUS) return true;
+  return false;
+}
+
 function updateMining(dt) {
   if (!input.mine || !hit) { mining = null; return; }
   if (hit.id === B.TNT || hit.id === B.MEGA_TNT) {
@@ -567,8 +646,8 @@ function updateMining(dt) {
   }
   if (!mining || mining.x !== hit.x || mining.y !== hit.y || mining.z !== hit.z) mining = { x: hit.x, y: hit.y, z: hit.z, p: 0 };
   const hard = game.mineHardness(hit.id);
-  if (hard === Infinity || isProtected(world.regionAt(hit.x, hit.y, hit.z))) {
-    if (warnTimer <= 0) { ui.toast(hard === Infinity ? 'Bedrock is too hard to break!' : 'You can\'t break buildings. Right-click to shop!'); warnTimer = 2.5; }
+  if (hard === Infinity) {
+    if (warnTimer <= 0) { ui.toast('Bedrock is too hard to break!'); warnTimer = 2.5; }
     mining = null;
     return;
   }
@@ -590,7 +669,23 @@ window.addEventListener('pagehide', save);
 
 // ---------- Every frame ----------
 let last = performance.now();
-let stepAt = 0, titleT = 0;
+let stepAt = 0, titleT = 0, cloudDrift = 0;
+let biomeHere = -1, biomeTime = 0;
+
+// Say hello when you walk into a new biome.
+function checkBiome(dt) {
+  const x = Math.floor(player.pos.x), z = Math.floor(player.pos.z);
+  if (x < 0 || z < 0 || x >= W || z >= D) return;
+  const b = world.biome[x + W * z];
+  if (b === BIOME.OCEAN || b === BIOME.BEACH) return;
+  if (b === biomeHere) { biomeTime = 0; return; }
+  biomeTime += dt;
+  if (biomeTime < 1.5) return;
+  const first = biomeHere === -1;
+  biomeHere = b;
+  biomeTime = 0;
+  if (!first) ui.toast('Welcome to the ' + BIOME_NAMES[b] + '!');
+}
 
 function frame(now) {
   requestAnimationFrame(frame);
@@ -598,12 +693,17 @@ function frame(now) {
   last = now;
   warnTimer -= dt;
 
+  // Load the chunks around you.
+  const fx = state === 'title' ? SPAWN.x : player.pos.x, fz = state === 'title' ? SPAWN.z : player.pos.z;
+  world.stream(fx, fz, view(), blockMat, 7);
+
   if (state === 'title') {
-    titleT += dt * 0.08;
-    camera.position.set(64 + Math.cos(titleT) * 46, GROUND + 22, 58 + Math.sin(titleT) * 46);
-    camera.lookAt(64, GROUND + 2, 58);
+    titleT += dt * 0.06;
+    camera.position.set(SPAWN.x + Math.cos(titleT) * 40, SPAWN.y + 24, SPAWN.z + Math.sin(titleT) * 40);
+    camera.lookAt(SPAWN.x, SPAWN.y + 4, SPAWN.z);
   } else {
-    const active = state === 'play' && !ui.shopOpen;
+    if (state === 'sleep') updateSleep(dt);
+    const active = state === 'play' && !menuOpen();
     if (!touchMode) {
       input.forward = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
       input.right = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
@@ -613,6 +713,11 @@ function frame(now) {
     const still = { forward: 0, right: 0, jump: false, sprint: false };
     if (state === 'play') player.update(dt, active ? input : still);
     if (player.splashed) sfx.splash();
+    if (player.fallHurt > 0) {
+      const n = player.fallHurt;
+      player.fallHurt = 0;
+      if (state === 'play' && game.hurt(n)) died('You fell from too high!');
+    }
     if (player.walked > stepAt) { stepAt = player.walked + 1.9; sfx.step(); }
 
     const bob = player.onGround ? Math.abs(Math.sin(player.walked * 2.2)) * 0.06 : 0;
@@ -635,11 +740,16 @@ function frame(now) {
         if (!updateFight(dt)) updateMining(dt);
         if (input.build) { buildTimer -= dt; if (buildTimer <= 0) { buildTimer = 0.25; tryBuild(); } }
       } else mining = null;
-      game.tick(dt, player);
+      game.tick(dt);
       updateTNT(dt);
       if (active) {
         const busy = input.mine || (input.sprint && Math.hypot(player.vel.x, player.vel.z) > 5);
         if (game.body(dt, busy) === 'starved') died('You starved! Your hunger bar ran out.');
+        cactusClock -= dt;
+        if (state === 'play' && cactusClock <= 0 && touchingCactus()) {
+          cactusClock = 0.8;
+          if (game.hurt(1)) died('Ouch! A cactus got you.');
+        }
       }
       // Night: zombies come out.
       const night = game.night;
@@ -653,29 +763,36 @@ function frame(now) {
         ui.toast('The sun is going down... get ready for zombies!');
       }
       wasNight = night;
-      if (active) zombies.update(dt, { player, night, level: dayNight.level, max: 3 + Math.min(5, game.s.nights), hitPlayer: zombieHitsPlayer });
+      if (active) checkBiome(dt);
+      if (active) mobs.update(dt, { player, night, level: dayNight.level, maxZombies: 3 + Math.min(5, game.s.nights), hitPlayer: zombieHitsPlayer });
       ui.update();
-      if (zombieHit) $('look-label').innerHTML = `Zombie &nbsp;<span class="cash">${'&#9829;'.repeat(Math.max(1, Math.ceil(zombieHit.zombie.hp / 2)))} +${money(zombieMoney() * game.mult)}</span>`;
-      else ui.setLook(hit, world);
+      if (mobHit) {
+        const m = mobHit.mob, hearts = '&#9829;'.repeat(Math.max(1, Math.ceil(m.hp / 2)));
+        $('look-label').innerHTML = `${MOB_NAMES[m.kind]} &nbsp;<span class="cash">${hearts}${m.k.hostile ? ' +' + money(zombieMoney() * game.mult) : ''}</span>`;
+      } else ui.setLook(hit, world);
     }
     target.show(hit, mining ? mining.p : 0);
 
     // Under water?
-    const under = camera.position.y < SEA - 0.1 && player.inWater;
-    $('water-tint').classList.toggle('on', under);
-    if (under) scene.fog.color.copy(WATER_FOG);
-    scene.fog.near = under ? 2 : 40;
-    scene.fog.far = under ? 28 : 120;
+    const wet = camera.position.y < SEA - 0.1 && player.inWater;
+    $('water-tint').classList.toggle('on', wet);
+    if (wet) scene.fog.color.copy(WATER_FOG);
   }
+  const under = state !== 'title' && camera.position.y < SEA - 0.1 && player.inWater;
+  const far = view() * 16 - 6;
+  scene.fog.near = under ? 2 : far * 0.45;
+  scene.fog.far = under ? 28 : far;
 
   dayNight.update(game.dayTime);
   hand.light(Math.max(0.45, dayNight.level));
   if (!$('water-tint').classList.contains('on')) scene.fog.color.copy(dayNight.fog);
-  world.remesh(blockMat, 7);
   bits.update(dt, world);
   popups.update(dt);
   sky.position.copy(camera.position);
-  clouds.position.x = ((clouds.position.x + dt * 1.2 + 200) % 400) - 200;
+  // Clouds drift by. They repeat every 640 blocks, so they are always around you.
+  cloudDrift += dt * 1.2;
+  clouds.position.x = cloudDrift + Math.floor((camera.position.x - cloudDrift - 320) / 640) * 640;
+  clouds.position.z = Math.floor((camera.position.z - 320) / 640) * 640;
   hand.update(dt, !!mining, player.walked, camera.aspect);
 
   renderer.clear();
@@ -688,4 +805,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // For testing from the browser console.
-window.cave = { world, game, player, ui, input, camera, zombies, dayNight, startGame, openShop, closeShop, breakBlock, lightTNT, tryBuild, get state() { return state; }, get hit() { return hit; } };
+window.cave = { world, game, player, ui, input, camera, mobs, dayNight, SPAWN, sleep, openInv, startGame, openShop, closeShop, breakBlock, lightTNT, tryBuild, get state() { return state; }, get hit() { return hit; } };
