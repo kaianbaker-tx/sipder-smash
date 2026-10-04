@@ -39,7 +39,7 @@ A Pokemon-style 3D game. It is its own Godot project: run Godot inside
 `critomon/`. Web build goes to `docs/critomon/`.
 
 - `scripts/main.gd` runs the story: title, Prof. Birch's lab, picking a
-  starter, the rival's Connect Four, Route 1, the Arena.
+  starter, Jax's first battle, Route 1, the Arena. Jax is a show-off rival.
 - `scripts/world.gd` builds the town and Route 1 in code. `lab.gd` is the
   inside of the lab. `battle_stage.gd` is where battles happen.
 - `scripts/dex.gd` has every Crito Mon, move and type. `critter_model.gd`
