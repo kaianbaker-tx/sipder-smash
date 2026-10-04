@@ -2,9 +2,9 @@
 import * as THREE from '../lib/three.min.js';
 import { buildAtlas } from './atlas.js';
 import { B, BLOCKS, SOLID } from './blocks.js';
-import { ORES, BUSINESSES, PICKS, bizCost, bizIncome, money } from './data.js';
+import { ORES, PICKS, money } from './data.js';
 import { World, W, D, SEA, GROUND, isProtected, R } from './world.js';
-import { buildTown, buildCave, buildBusiness, SPAWN, MINE, SHOP, CAVE, PLOTS, plotSignPos, chimneys } from './town.js';
+import { buildTown, buildCave, SPAWN, MINE, SHOP, CAVE } from './town.js';
 import { Player, EYE } from './player.js';
 import { Game } from './game.js';
 import { UI } from './ui.js';
@@ -77,26 +77,6 @@ let wasNight = false;
 new Sign(scene, (MINE.x0 + MINE.x1) / 2, GROUND + 7, MINE.z0 + 1, ['THE MINE', 'Ore grows back!'], { height: 1.8 });
 new Sign(scene, CAVE.x - 1, GROUND + 4.5, (CAVE.z0 + CAVE.z1 + 1) / 2, ['MONEY CAVE', 'Dig for Money Ore!'], { height: 1.6, bg: '#27c95a', stroke: '#27c95a', color: '#fff6d6', color2: '#fff6d6', border: '#1b0d2e' });
 new Sign(scene, SHOP.x0 + SHOP.w / 2, GROUND + 11, SHOP.z0 + SHOP.d / 2, ['SHOP', 'Press B'], { height: 2, bg: '#ffd21f', stroke: '#ffd21f' });
-const bizSigns = PLOTS.map((p) => new Sign(scene, 0, 0, 0, ['']));
-function updateBizSign(k) {
-  const b = BUSINESSES[k], lv = game.s.biz[k];
-  const lines = lv ? [b.name, `Level ${lv}  ${money(bizIncome(b, lv) * game.mult)}/sec`] : [b.name, `FOR SALE ${money(bizCost(b, 0))}`];
-  bizSigns[k].set(lines, plotSignPos(PLOTS[k], lv));
-}
-ui.hooks.onBizChanged = (k) => {
-  updateBizSign(k);
-  const p = PLOTS[k];
-  if (player.hits(player.pos.x, player.pos.y, player.pos.z)) {
-    player.pos.x = p.x0 + p.w / 2;
-    player.pos.z = p.z0 - 2;
-    player.pos.y = GROUND + 1;
-  }
-};
-ui.hooks.onBizPopup = (k, v) => {
-  const s = bizSigns[k].pos;
-  if (Math.hypot(s.x - player.pos.x, s.z - player.pos.z) < 45) popups.add('+' + money(v), s.x, s.y + 1.4, s.z);
-};
-BUSINESSES.forEach((b, k) => updateBizSign(k));
 
 // Build all the shapes now (the title screen shows the world).
 world.remesh(blockMat, Infinity);
@@ -203,9 +183,8 @@ function renderSlots() {
   let html = '';
   for (let n = 1; n <= 3; n++) {
     const d = Game.loadData(n);
-    const bizCount = d && Array.isArray(d.biz) ? d.biz.filter((l) => l > 0).length : 0;
     const ores = d ? d.ores || 1 : 0;
-    const info = d ? `${money(d.money || 0)} &middot; ${ores} material${ores === 1 ? '' : 's'} &middot; ${bizCount} business${bizCount === 1 ? '' : 'es'}` : 'Empty &middot; start a new world';
+    const info = d ? `${money(d.money || 0)} &middot; ${ores} material${ores === 1 ? '' : 's'} &middot; day ${(d.nights || 0) + 1}` : 'Empty &middot; start a new world';
     html += `<div class="save-card"><button class="btn save-play${d ? ' green' : ''}" data-slot="${n}">
       <span class="save-name">SAVE ${n}</span><span class="save-info">${info}</span></button>
       ${d ? `<button class="btn red small save-del" data-slot="${n}" aria-label="Delete save ${n}">X</button>` : ''}</div>`;
@@ -236,7 +215,6 @@ function resetWorld() {
   game.regrow = [];
   world.resetToBase();
   world.setUnlocked(1);
-  PLOTS.forEach((p) => buildBusiness(world, p, 0));
   ui.sel = 0;
   ui.lastIncome = -1;
   ui.changed();
@@ -249,7 +227,6 @@ function spawnPlayer() {
 }
 
 function showGame() {
-  BUSINESSES.forEach((b, k) => updateBizSign(k));
   hand.setColor(PICKS[game.s.pick].color);
   $('confirm').classList.add('hidden');
   $('title').classList.add('hidden');
@@ -269,13 +246,12 @@ function startGame(n) {
   const data = Game.loadData(n);
   zombies.clear();
   if (data) {
-    const made = game.restore(data);
+    game.restore(data);
     if (data.pos) {
       [player.pos.x, player.pos.y, player.pos.z, player.yaw, player.pitch] = data.pos;
       player.unstick();
     }
     ui.toast(`Playing SAVE ${n}`, 'good');
-    if (made >= 1) setTimeout(() => ui.toast(`Welcome back! Your businesses made ${money(made)} while you were gone!`, 'good'), 600);
   } else {
     setTimeout(() => ui.toast('Mine the orange Copper Ore in THE MINE. It turns into money!'), 800);
     setTimeout(() => ui.toast('Then press B to open the SHOP.'), 4200);
@@ -315,7 +291,7 @@ $('save-btn').onclick = () => {
 $('files-btn').onclick = () => { sfx.click(); toTitle(); };
 $('reset-btn').onclick = () => {
   sfx.click();
-  askConfirm('START OVER?', `Your money, businesses and buildings in SAVE ${slot} will be gone.`, () => {
+  askConfirm('START OVER?', `Your money and buildings in SAVE ${slot} will be gone.`, () => {
     Game.wipe(slot);
     resetWorld();
     spawnPlayer();
@@ -372,13 +348,6 @@ function tryBuild() {
   if (!hit) return;
   const region = world.regionAt(hit.x, hit.y, hit.z);
   if (region === R.SHOP) { input.build = false; openShop('ores'); return; }
-  if (region >= R.LEMON) {
-    // Look inside your stand to buy food, or in the factory to buy explosives.
-    const k = region - R.LEMON, owned = game.s.biz[k] > 0;
-    input.build = false;
-    openShop(!owned ? 'biz' : k === 2 ? 'boom' : 'food');
-    return;
-  }
   if (held === B.HOUSE_KIT) { input.build = false; placeHouse(); return; }
   const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
   if (!world.inside(x, y, z) || SOLID[world.get(x, y, z)]) return;
@@ -621,7 +590,7 @@ window.addEventListener('pagehide', save);
 
 // ---------- Every frame ----------
 let last = performance.now();
-let stepAt = 0, puffTimer = 0, titleT = 0;
+let stepAt = 0, titleT = 0;
 
 function frame(now) {
   requestAnimationFrame(frame);
@@ -697,13 +666,6 @@ function frame(now) {
     if (under) scene.fog.color.copy(WATER_FOG);
     scene.fog.near = under ? 2 : 40;
     scene.fog.far = under ? 28 : 120;
-
-    // Money smoke from the factory.
-    puffTimer -= dt;
-    if (game.s.biz[2] > 0 && puffTimer <= 0) {
-      puffTimer = 0.3;
-      for (const c of chimneys(game.s.biz[2])) bits.puff(c.x, c.y, c.z);
-    }
   }
 
   dayNight.update(game.dayTime);

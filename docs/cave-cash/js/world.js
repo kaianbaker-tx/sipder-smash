@@ -14,7 +14,7 @@ const LAMP_R = 6;                       // how far a lamp shines
 const SX = W / CS, SY = H / CS, SZ = D / CS;
 
 // Regions: what part of town a block belongs to.
-export const R = { NONE: 0, MINE: 1, SHOP: 2, TOWN: 3, LEMON: 10, PIZZA: 11, FACTORY: 12 };
+export const R = { NONE: 0, MINE: 1, SHOP: 2, TOWN: 3 };
 export const isProtected = (r) => r >= 2;
 
 // Faces: normal, 4 corners (bottom-left, bottom-right, top-right, top-left), brightness, tile slot.

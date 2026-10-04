@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Cave Cash</title>
-<meta name="description" content="Mine money in a blocky world. Buy new materials, pickaxes and businesses. Get rich!">
+<meta name="description" content="Mine money in a blocky world. Buy new materials, pickaxes, food and TNT. Get rich!">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -14,7 +14,6 @@
 <div id="hud" class="hidden">
   <div id="money-box">
     <div id="money">$0</div>
-    <div id="income"></div>
   </div>
   <div id="top-right">
     <button id="shop-btn" class="btn gold">SHOP <small>B</small></button>
@@ -73,7 +72,7 @@
     </div>
     <div class="how small-how">
       <div>Mine ore in <b>THE MINE</b> or in the caves. Ore turns into money!</div>
-      <div>Buy new materials, faster pickaxes and businesses in the <b>SHOP</b>.</div>
+      <div>Buy new materials, faster pickaxes, food and TNT in the <b>SHOP</b>.</div>
       <div>Every upgrade costs <b>DOUBLE</b> the one before.</div>
       <div>Keep your <b>hunger bar</b> full: right-click food or press <b>F</b>. If it runs out, you lose hearts!</div>
       <div><b>ZOMBIES</b> come out at night. Town is safe, and they are scared of lamps. Hit them for money!</div>
@@ -93,7 +92,7 @@
 <div id="confirm" class="screen hidden">
   <div class="panel">
     <h2 id="confirm-title">START OVER?</h2>
-    <p id="confirm-text">Your money, businesses and buildings will be gone.</p>
+    <p id="confirm-text">Your money and buildings will be gone.</p>
     <div class="row">
       <button id="confirm-yes" class="btn red">YES</button>
       <button id="confirm-no" class="btn green">NO WAY</button>
@@ -112,7 +111,6 @@
     <div class="tabs">
       <button class="tab" data-tab="ores">MATERIALS</button>
       <button class="tab" data-tab="picks">PICKAXES</button>
-      <button class="tab" data-tab="biz">BUSINESSES</button>
       <button class="tab" data-tab="food">FOOD</button>
       <button class="tab" data-tab="boom">BOOM!</button>
       <button class="tab" data-tab="blocks">BLOCKS</button>

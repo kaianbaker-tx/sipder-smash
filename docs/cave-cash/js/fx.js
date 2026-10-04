@@ -35,15 +35,6 @@ export class Bits {
     }
   }
 
-  // Money that flies up out of a chimney.
-  puff(x, y, z) {
-    if (this.list.length >= MAX_BITS) return;
-    this.list.push({
-      x, y, z, vx: (Math.random() - 0.5) * 0.6, vy: 2.2 + Math.random(), vz: (Math.random() - 0.5) * 0.6,
-      life: 2.2, size: 0.3, r: 0.2, g: 0.85, b: 0.35, float: true,
-    });
-  }
-
   update(dt, world) {
     const m = this.m;
     let n = 0;

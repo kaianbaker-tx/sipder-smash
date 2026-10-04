@@ -1,7 +1,7 @@
-// The town: THE MINE, the SHOP, paths, and the 3 business buildings.
+// The town: THE MINE, the SHOP, the Money Cave, paths and lamp posts.
 import { B } from './blocks.js';
 import { ORES } from './data.js';
-import { H, GROUND, R } from './world.js';
+import { GROUND, R } from './world.js';
 
 export const SPAWN = { x: 64.5, y: GROUND + 1, z: 62.5 };
 
@@ -12,19 +12,6 @@ export const SHOP = { x0: 80, z0: 56, w: 9, d: 9 };
 
 // The Money Cave: stairs go down from town to a big cave full of ore.
 export const CAVE = { x: 47, z0: 57, z1: 59, room: { x: 27, y: 9, z: 58, rx: 9, ry: 4.5, rz: 9 } };
-
-// Business plots. The front (door) faces north, toward spawn.
-export const PLOTS = [
-  { key: 'lemon', region: R.LEMON, x0: 43, z0: 70, w: 9, d: 9, wall: B.YELLOW, trim: B.WHITE, ring: B.YELLOW },
-  { key: 'pizza', region: R.PIZZA, x0: 77, z0: 70, w: 10, d: 10, wall: B.RED, trim: B.WHITE, ring: B.RED },
-  { key: 'factory', region: R.FACTORY, x0: 55, z0: 72, w: 19, d: 16, wall: B.METAL, trim: B.BRICK, ring: B.GOLD_BLOCK },
-];
-
-// Where each plot's floating sign goes (changes with the building height).
-export function plotSignPos(p, level) {
-  const top = level > 0 ? GROUND + 3 * level + (p.key === 'lemon' ? 5 : 9) : GROUND + 4;
-  return { x: p.x0 + p.w / 2, y: top, z: p.z0 - 0.5 };
-}
 
 const mineDepth = (x, z) => {
   const e = Math.min(x - MINE.x0, MINE.x1 - 1 - x, z - MINE.z0, MINE.z1 - 1 - z);
@@ -84,10 +71,6 @@ export function buildTown(world, r) {
   path(63, 52, 65, 58);
   path(49, 58, 60, 59);
   path(68, 59, 79, 60);
-  path(46, 66, 83, 67);
-  path(46, 68, 48, 69);
-  path(81, 68, 83, 69);
-  path(63, 68, 65, 71);
 
   // Lamp posts keep the town safe from zombies at night.
   for (const [x, z] of [[60, 58], [68, 58], [60, 66], [68, 66], [62, 52], [66, 52], [74, 61], [52, 65], [76, 65], [44, 65], [84, 65], [50, 56], [56, 61]]) {
@@ -115,12 +98,6 @@ export function buildTown(world, r) {
   box(world, sx1 - 2, GROUND + 1, s.z0 + 2, sx1 - 2, GROUND + 1, sz1 - 2, B.MONEY_BLOCK);
   box(world, sx1 - 1, GROUND + 1, s.z0 + 3, sx1 - 1, GROUND + 2, s.z0 + 3, B.GOLD_BLOCK);
   box(world, sx1 - 1, GROUND + 1, sz1 - 3, sx1 - 1, GROUND + 2, sz1 - 3, B.GOLD_BLOCK);
-
-  // Empty business plots.
-  for (const p of PLOTS) {
-    box(world, p.x0, GROUND, p.z0, p.x0 + p.w - 1, H - 1, p.z0 + p.d - 1, 0, p.region);
-    buildBusiness(world, p, 0, false);
-  }
 }
 
 export function buildCave(world, r) {
@@ -178,90 +155,3 @@ export function buildCave(world, r) {
   const fy = (() => { let y = room.y; while (y > 1 && world.data[world.idx(room.x, y - 1, room.z)] === 0) y--; return y; })();
   for (const [dx, dz, dy] of [[0, 0, 0], [1, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0, 0, 1]]) put(room.x + dx, fy + dy, room.z + dz, B.MONEY_ORE);
 }
-
-// Build (or rebuild) a business at its level. Level 0 = empty plot for sale.
-export function buildBusiness(world, p, level, live = true) {
-  const x1 = p.x0 + p.w - 1, z1 = p.z0 + p.d - 1;
-  const put = (x, y, z, id) => {
-    if (y >= H) return;
-    if (live) world.set(x, y, z, id, false);
-    else world.data[world.idx(x, y, z)] = id;
-  };
-  // Clear it.
-  for (let y = GROUND + 1; y < H; y++) for (let z = p.z0; z <= z1; z++) for (let x = p.x0; x <= x1; x++)
-    if (world.data[world.idx(x, y, z)]) put(x, y, z, 0);
-  for (let z = p.z0; z <= z1; z++) for (let x = p.x0; x <= x1; x++) {
-    const edge = x === p.x0 || x === x1 || z === p.z0 || z === z1;
-    put(x, GROUND, z, level === 0 ? (edge ? p.ring : B.GRASS) : B.PLANKS);
-  }
-  if (level === 0) return;
-
-  // Floors: 3 blocks each. More levels = taller building!
-  const midX = p.x0 + (p.w >> 1);
-  for (let f = 0; f < level; f++) {
-    const y0 = GROUND + 1 + f * 3;
-    for (let z = p.z0; z <= z1; z++) for (let x = p.x0; x <= x1; x++) {
-      const ex = x === p.x0 || x === x1, ez = z === p.z0 || z === z1;
-      const edge = ex || ez, corner = ex && ez;
-      if (edge) {
-        const along = ex ? z - p.z0 : x - p.x0;
-        put(x, y0, z, corner ? p.trim : p.wall);
-        put(x, y0 + 1, z, corner ? p.trim : along % 3 === 1 ? p.wall : p.key === 'factory' ? B.WINDOW : B.GLASS);
-        put(x, y0 + 2, z, p.trim);
-      } else put(x, y0 + 2, z, B.PLANKS);
-    }
-  }
-  // Front door.
-  const doorW = p.key === 'factory' ? 3 : 2;
-  const dx0 = midX - (doorW >> 1);
-  for (let x = dx0; x < dx0 + doorW; x++) {
-    put(x, GROUND + 1, p.z0, 0);
-    put(x, GROUND + 2, p.z0, 0);
-  }
-  // Something inside: a counter.
-  const inside = p.key === 'lemon' ? B.LEMON : p.key === 'pizza' ? B.PIZZA : B.MONEY_BLOCK;
-  for (let x = p.x0 + 2; x <= x1 - 2; x++) put(x, GROUND + 1, z1 - 2, inside);
-
-  // Roof decorations.
-  const roof = GROUND + 1 + level * 3;
-  if (p.key === 'lemon') {
-    for (let z = p.z0; z <= z1; z++) for (let x = p.x0; x <= x1; x++) {
-      const edge = x === p.x0 || x === x1 || z === p.z0 || z === z1;
-      if (edge) put(x, roof, z, (x + z) % 2 ? B.RED : B.WHITE);
-    }
-    const cx = midX - 1, cz = p.z0 + (p.d >> 1) - 1;
-    for (let y = 0; y < 3; y++) for (let z = 0; z < 3; z++) for (let x = 0; x < 3; x++) {
-      if ((y === 0 || y === 2) && x !== 1 && z !== 1) continue;
-      put(cx + x, roof + y, cz + z, B.LEMON);
-    }
-    put(cx + 1, roof + 3, cz + 1, B.LEAVES);
-  } else if (p.key === 'pizza') {
-    // A giant pizza standing up on the roof.
-    const cx = midX, cy = roof + 3, zz = p.z0 + 1;
-    for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) {
-      const d = x * x + y * y;
-      if (d > 11) continue;
-      put(cx + x, cy + y, zz, d > 7 ? B.ORANGE : B.PIZZA);
-    }
-  } else {
-    // Money Factory: chimneys and a giant gold $ sign.
-    for (const cx of [p.x0 + 1, x1 - 2]) {
-      for (let y = roof; y < roof + 5; y++) for (let z = z1 - 2; z <= z1 - 1; z++) for (let x = cx; x <= cx + 1; x++) put(x, y, z, B.BRICK);
-    }
-    const DOLLAR = ['..#..', '.####', '#.#..', '.###.', '..#.#', '####.', '..#..'];
-    DOLLAR.forEach((row, j) => [...row].forEach((ch, i) => {
-      if (ch === '#') put(midX - 2 + i, roof + 6 - j, p.z0 + 1, B.GOLD_BLOCK);
-    }));
-  }
-}
-
-// Chimney tops for the green money smoke.
-export function chimneys(level) {
-  const p = PLOTS[2];
-  const roof = GROUND + 1 + level * 3 + 5;
-  return [
-    { x: p.x0 + 2, y: roof, z: p.z0 + p.d - 2 },
-    { x: p.x0 + p.w - 2, y: roof, z: p.z0 + p.d - 2 },
-  ];
-}
-

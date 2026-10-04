@@ -1,5 +1,5 @@
 // Everything on the screen: money, hotbar, messages and the shop.
-import { ORES, PICKS, BUSINESSES, PACKS, FOODS, BOOMS, DOUBLE_MONEY_COST, bizCost, bizIncome, moneyOreValue, money } from './data.js';
+import { ORES, PICKS, PACKS, FOODS, BOOMS, DOUBLE_MONEY_COST, moneyOreValue, money } from './data.js';
 import { B, BLOCKS, PLACEABLE } from './blocks.js';
 import { blockIcon } from './atlas.js';
 import * as sfx from './sound.js';
@@ -33,7 +33,7 @@ export class UI {
     this.sel = 0;               // which hotbar block is picked
     this.tab = 'ores';
     this.shopOpen = false;
-    this.hooks = {};            // set by main.js: onBizChanged, onBizPopup
+    this.hooks = {};            // set by main.js: closeShop
     this.lastMoney = -1;
     this.lastIncome = -1;
     this.hotKey = '';
@@ -81,9 +81,6 @@ export class UI {
     this.hurtT = setTimeout(() => f.classList.remove('on'), 60);
   }
 
-  businessChanged(k) { if (this.hooks.onBizChanged) this.hooks.onBizChanged(k); }
-  bizPopup(k, v) { if (this.hooks.onBizPopup) this.hooks.onBizPopup(k, v); }
-
   // ---------- HUD ----------
   update() {
     const g = this.game, s = g.s;
@@ -99,11 +96,9 @@ export class UI {
       this.lastMoney = m;
       if (this.shopOpen) this.refreshPrices();
     }
-    const inc = g.income();
     const night = g.night;
-    const key = inc + ':' + s.pick + ':' + s.x2 + ':' + night + ':' + s.nights;
+    const key = s.pick + ':' + s.x2 + ':' + night + ':' + s.nights;
     if (key !== this.lastIncome) {
-      $('income').textContent = inc > 0 ? `+${money(inc)} every second` : '';
       this.lastIncome = key;
       $('badges').innerHTML = (night ? `<div class="badge night">NIGHT ${s.nights} &middot; ZOMBIES!</div>` : `<div class="badge day">DAY ${s.nights + 1}</div>`) +
         `<div class="badge">${PICKS[s.pick].name}</div>` + (s.x2 ? '<div class="badge x2">2X MONEY</div>' : '');
@@ -146,14 +141,7 @@ export class UI {
     if (!hit) { el.innerHTML = ''; return; }
     const g = this.game;
     const region = world.regionAt(hit.x, hit.y, hit.z);
-    const plots = { 10: 0, 11: 1, 12: 2 };
     if (region === 2) { el.innerHTML = 'SHOP &nbsp;<span class="cash">right-click or press B</span>'; return; }
-    if (region in plots) {
-      const k = plots[region], b = BUSINESSES[k], lv = g.s.biz[k];
-      const what = !lv ? 'right-click to buy it' : k === 0 ? 'right-click to buy lemonade' : k === 1 ? 'right-click to buy pizza' : 'right-click to buy explosives';
-      el.innerHTML = `${b.name} ${lv ? 'level ' + lv : '- for sale'} &nbsp;<span class="cash">${what}</span>`;
-      return;
-    }
     const vis = world.visual[hit.id];
     const bd = BLOCKS[vis];
     let extra = '';
@@ -235,7 +223,7 @@ export class UI {
 
   renderShop() {
     const g = this.game, s = g.s;
-    const key = this.tab + JSON.stringify([s.ores, s.pick, s.biz, s.x2]);
+    const key = this.tab + JSON.stringify([s.ores, s.pick, s.x2]);
     if (key !== this.shopKey) {
       this.shopKey = key;
       $('shop-list').innerHTML = this['tab_' + this.tab]();
@@ -286,46 +274,21 @@ export class UI {
     }).join('');
   }
 
-  tab_biz() {
-    const s = this.game.s, mult = this.game.mult;
-    const order = [2, 0, 1];
-    return order.map((k) => {
-      const b = BUSINESSES[k], lv = s.biz[k];
-      const icon = k === 0 ? B.LEMON : k === 1 ? B.PIZZA : B.MONEY_BLOCK;
-      const now = bizIncome(b, lv) * mult, nxt = bizIncome(b, lv + 1) * mult;
-      const right = lv >= b.max ? '<div class="done">MAX!</div>'
-        : `<button class="btn green" data-buy="biz" data-k="${k}" data-cost="${bizCost(b, lv)}">${lv ? 'UPGRADE' : 'BUY'} ${money(bizCost(b, lv))}</button>`;
-      return `<div class="card${k === 2 ? ' main' : ''}"><img alt="" src="${blockIcon(icon)}"><div class="info">
-        <div class="name">${b.name}<span class="tagline">${b.size}</span></div>
-        <div class="sub">${lv ? `Level ${lv} — makes <span class="cash">${money(now)}</span> every second` : 'Not yours yet'}${lv < b.max ? ` → <span class="cash">${money(nxt)}</span>/sec` : ''}</div>
-        <div class="bar"><i style="width:${(lv / b.max) * 100}%"></i></div>
-      </div>${right}</div>`;
-    }).join('');
-  }
-
   tab_food() {
     const s = this.game.s;
     const have = (id) => s.inv[id] || 0;
     return `<div class="card"><img alt="" src="${blockIcon(B.LEAVES)}"><div class="info">
         <div class="name">Free apples!</div><div class="sub">Break tree leaves. Sometimes an apple falls out.</div></div></div>` +
-      FOODS.map((f, i) => {
-        const locked = f.need !== undefined && !s.biz[f.need];
-        const right = locked ? `<div class="done" style="color:#b9a4ff">LOCKED</div>`
-          : `<button class="btn green" data-buy="food" data-i="${i}" data-cost="${f.cost}">BUY ${money(f.cost)}</button>`;
-        return `<div class="card${locked ? ' locked' : ''}"><img alt="" src="${blockIcon(f.id)}"><div class="info">
+      FOODS.map((f, i) => `<div class="card"><img alt="" src="${blockIcon(f.id)}"><div class="info">
           <div class="name">${f.count} ${f.name}</div>
-          <div class="sub">Each one fills ${BLOCKS[f.id].food} hunger. You have ${have(f.id)}.${locked ? ` Buy the ${BUSINESSES[f.need].name} to sell it!` : ''}</div>
-        </div>${right}</div>`;
-      }).join('');
+          <div class="sub">Each one fills ${BLOCKS[f.id].food} hunger. You have ${have(f.id)}.</div>
+        </div><button class="btn green" data-buy="food" data-i="${i}" data-cost="${f.cost}">BUY ${money(f.cost)}</button></div>`).join('');
   }
 
   tab_boom() {
-    const s = this.game.s, owned = s.biz[2] > 0;
-    let html = owned ? '' : `<div class="card main"><img alt="" src="${blockIcon(B.MONEY_BLOCK)}"><div class="info">
-      <div class="name">Buy the Money Factory first!</div><div class="sub">Your factory makes the explosives. Find it in BUSINESSES.</div></div></div>`;
-    html += BOOMS.map((p, i) => `<div class="card${owned ? '' : ' locked'}"><img alt="" src="${blockIcon(p.icon)}"><div class="info">
+    let html = BOOMS.map((p, i) => `<div class="card"><img alt="" src="${blockIcon(p.icon)}"><div class="info">
         <div class="name">${p.name}</div><div class="sub">${p.about} Ore it blows up turns into money!</div>
-      </div>${owned ? `<button class="btn green" data-buy="boom" data-i="${i}" data-cost="${p.cost}">BUY ${money(p.cost)}</button>` : '<div class="done" style="color:#b9a4ff">LOCKED</div>'}</div>`).join('');
+      </div><button class="btn green" data-buy="boom" data-i="${i}" data-cost="${p.cost}">BUY ${money(p.cost)}</button></div>`).join('');
     html += `<div class="card"><div class="ico" style="background:#ff3b5c">!</div><div class="info">
       <div class="name">How to blow stuff up</div><div class="sub">Pick the TNT in your hotbar. Right-click to place it. Hit it to light it. RUN! Too close and you lose hearts.</div></div></div>`;
     return html;
@@ -347,7 +310,6 @@ export class UI {
     let ok = false;
     if (b.dataset.buy === 'ore') ok = g.buyOre();
     else if (b.dataset.buy === 'pick') ok = g.buyPick();
-    else if (b.dataset.buy === 'biz') ok = g.buyBiz(+b.dataset.k);
     else if (b.dataset.buy === 'pack') ok = g.buyPack(+b.dataset.i);
     else if (b.dataset.buy === 'food') ok = g.buyFood(+b.dataset.i);
     else if (b.dataset.buy === 'boom') ok = g.buyBoom(+b.dataset.i);

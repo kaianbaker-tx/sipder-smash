@@ -39,8 +39,9 @@ what he meant. Short sentences, one idea at a time.
   Money Ore replaces diamonds. Every upgrade costs double.
 - Plain web files with three.js, not Godot. No build step: edit and push.
   Once merged to main it is live at `/cave-cash/` on the Pages site.
-- Prices are in `js/data.js`. The Mine, Shop, Money Cave and the 3
-  businesses are built in `js/town.js`. The land is made in `js/world.js`.
+- Prices are in `js/data.js`. The Mine, Shop and Money Cave are built in
+  `js/town.js`. The land is made in `js/world.js`. Kaian asked to take the
+  businesses out, so there are none.
 - Like Minecraft: hearts, hunger and food (`js/game.js`), day and night
   (`js/daynight.js`), zombies at night (`js/zombies.js`), TNT, house kits.
   Zombies stay out of town and away from lamps.

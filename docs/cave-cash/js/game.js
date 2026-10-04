@@ -1,9 +1,9 @@
-// Money, shopping, businesses, the mine growing back, and saving.
-import { ORES, PICKS, BUSINESSES, PACKS, FOODS, BOOMS, HUNGER, MILESTONES, DOUBLE_MONEY_COST, bizCost, bizIncome, moneyOreValue, money } from './data.js';
+// Money, shopping, hunger, the mine growing back, and saving.
+import { ORES, PICKS, PACKS, FOODS, BOOMS, HUNGER, MILESTONES, DOUBLE_MONEY_COST, moneyOreValue, money } from './data.js';
 import { B, BLOCKS, isOre } from './blocks.js';
 import { isProtected, R } from './world.js';
 import { CYCLE, isNight } from './daynight.js';
-import { mineRoll, buildBusiness, PLOTS } from './town.js';
+import { mineRoll } from './town.js';
 import { rng } from './noise.js';
 import * as sfx from './sound.js';
 
@@ -19,8 +19,6 @@ export class Game {
     this.r = rng((Date.now() & 0xffffff) + 1);
     this.time = 0;
     this.regrow = [];
-    this.bizClock = 0;
-    this.bizBank = [0, 0, 0];
     this.hungerClock = 0;
     this.starveClock = 0;
     this.healClock = 0;
@@ -29,7 +27,7 @@ export class Game {
 
   static fresh() {
     return {
-      money: 0, earned: 0, ores: 1, pick: 0, biz: [0, 0, 0], x2: false, milestone: 0, played: 0,
+      money: 0, earned: 0, ores: 1, pick: 0, x2: false, milestone: 0, played: 0,
       inv: { [B.APPLE]: 3 }, hunger: HUNGER.max, health: 10,
       clock: 0.05 * CYCLE, nights: 0, kills: 0,
     };
@@ -39,10 +37,6 @@ export class Game {
 
   get dayTime() { return this.s.clock / CYCLE; }   // 0..1
   get night() { return isNight(this.dayTime); }
-
-  income() {
-    return BUSINESSES.reduce((sum, b, i) => sum + bizIncome(b, this.s.biz[i]), 0) * this.mult;
-  }
 
   earn(n) {
     n *= this.mult;
@@ -191,19 +185,6 @@ export class Game {
     return true;
   }
 
-  buyBiz(k) {
-    const b = BUSINESSES[k], lv = this.s.biz[k];
-    if (lv >= b.max) return false;
-    if (!this.spend(bizCost(b, lv))) return false;
-    this.s.biz[k] = lv + 1;
-    buildBusiness(this.world, PLOTS[k], lv + 1);
-    sfx.levelUp();
-    this.ui.toast(lv === 0 ? `You own the ${b.name}! It makes money every second.` : `${b.name} is now level ${lv + 1}!`, 'good');
-    this.ui.businessChanged(k);
-    this.ui.changed();
-    return true;
-  }
-
   buyDouble() {
     if (this.s.x2) return false;
     if (!this.spend(DOUBLE_MONEY_COST)) return false;
@@ -216,11 +197,6 @@ export class Game {
 
   buyFood(i) {
     const f = FOODS[i];
-    if (f.need !== undefined && !this.s.biz[f.need]) {
-      this.ui.toast(`Buy the ${BUSINESSES[f.need].name} first to sell ${f.name}!`, 'bad');
-      sfx.nope();
-      return false;
-    }
     if (!this.spend(f.cost)) return false;
     this.give(f.id, f.count);
     this.ui.toast(`Got ${f.count} ${f.name}! Pick it in your hotbar and right-click to eat.`, 'good');
@@ -229,11 +205,6 @@ export class Game {
   }
 
   buyBoom(i) {
-    if (!this.s.biz[2]) {
-      this.ui.toast('Buy the Money Factory first. It makes the explosives!', 'bad');
-      sfx.nope();
-      return false;
-    }
     const p = BOOMS[i];
     if (!this.spend(p.cost)) return false;
     for (const [id, n] of p.give) this.give(id, n);
@@ -281,22 +252,6 @@ export class Game {
     this.time += dt;
     this.s.played += dt;
     this.s.clock = (this.s.clock + dt) % CYCLE;
-    // Businesses make money.
-    const inc = this.income();
-    if (inc > 0) {
-      this.s.money += inc * dt;
-      this.s.earned += inc * dt;
-      BUSINESSES.forEach((b, k) => (this.bizBank[k] += bizIncome(b, this.s.biz[k]) * this.mult * dt));
-      this.bizClock += dt;
-      if (this.bizClock > 3) {
-        this.bizClock = 0;
-        this.bizBank.forEach((v, k) => { if (v >= 1) this.ui.bizPopup(k, v); this.bizBank[k] = 0; });
-      }
-      while (this.s.milestone < MILESTONES.length && this.s.earned >= MILESTONES[this.s.milestone][0]) {
-        this.ui.bigText(MILESTONES[this.s.milestone][1], this.s.milestone >= 4);
-        this.s.milestone++;
-      }
-    }
     // The mine grows back.
     const w = this.world;
     for (let k = this.regrow.length - 1; k >= 0; k--) {
@@ -350,7 +305,7 @@ export class Game {
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
   }
 
-  // Put a saved game back. Returns money made while you were away.
+  // Put a saved game back.
   restore(data) {
     const f = Game.fresh();
     for (const k of Object.keys(f)) if (data[k] !== undefined) this.s[k] = data[k];
@@ -359,15 +314,9 @@ export class Game {
     this.s.health = Math.max(1, Math.min(10, this.s.health | 0));
     this.s.hunger = Math.max(0, Math.min(HUNGER.max, this.s.hunger | 0));
     this.s.clock = (+this.s.clock || 0) % CYCLE;
-    this.s.biz = BUSINESSES.map((b, k) => Math.max(0, Math.min(b.max, (data.biz && data.biz[k]) | 0)));
     if (Array.isArray(data.edits)) this.world.applyEdits(data.edits);
     this.world.setUnlocked(this.s.ores);
-    this.s.biz.forEach((lv, k) => lv && buildBusiness(this.world, PLOTS[k], lv));
     // Mine blocks that were dug out grow back soon.
     for (const c of this.world.mineCells) if (this.world.data[c] === 0) this.regrow.push({ i: c, at: this.time + 3 + this.r() * 25 });
-    const away = Math.min(2 * 3600, Math.max(0, (Date.now() - (data.savedAt || Date.now())) / 1000));
-    const made = this.income() * away;
-    if (made >= 1) { this.s.money += made; this.s.earned += made; }
-    return made;
   }
 }

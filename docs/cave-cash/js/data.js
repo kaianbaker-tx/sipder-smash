@@ -35,16 +35,6 @@ export const PICKS = [
   { name: 'Cosmic Pickaxe', speed: 15, cost: 2560, color: '#8a7dff' },
 ];
 
-// One main business and two smaller ones. They make money every second.
-// Each level costs double. Each level adds `income` more dollars per second.
-export const BUSINESSES = [
-  { key: 'lemon', name: 'Lemonade Stand', size: 'Small business', cost: 15, income: 2, max: 10, color: '#ffe23a' },
-  { key: 'pizza', name: 'Pizza Shop', size: 'Small business', cost: 150, income: 8, max: 10, color: '#ff5a36' },
-  { key: 'factory', name: 'Money Factory', size: 'MAIN business', cost: 750, income: 40, max: 10, color: '#27c95a' },
-];
-export const bizCost = (b, level) => b.cost * 2 ** level;
-export const bizIncome = (b, level) => b.income * level;
-
 export const DOUBLE_MONEY_COST = 5000;
 
 // Building blocks you can buy for building stuff.
@@ -60,16 +50,15 @@ export const PACKS = [
   { name: 'Money Blocks', give: [[B.MONEY_BLOCK, 8]], cost: 150, icon: B.MONEY_BLOCK },
 ];
 
-// Food fills your hunger bar. Lemonade and pizza come from your own stands.
-// `need` = which business you must own to buy it (0 lemonade stand, 1 pizza shop).
+// Food fills your hunger bar.
 export const FOODS = [
   { id: B.APPLE, name: 'Apple', cost: 3, count: 3 },
-  { id: B.LEMONADE, name: 'Lemonade', cost: 6, count: 2, need: 0 },
-  { id: B.PIZZA_FOOD, name: 'Pizza', cost: 12, count: 2, need: 1 },
+  { id: B.LEMONADE, name: 'Lemonade', cost: 6, count: 2 },
+  { id: B.PIZZA_FOOD, name: 'Pizza', cost: 12, count: 2 },
 ];
 export const HUNGER = { max: 10, drain: 45, starve: 4, heal: 3 };  // seconds per step
 
-// Explosives are made in the Money Factory. Light them by hitting them. Then RUN!
+// Explosives. Light them by hitting them. Then RUN!
 export const BOOMS = [
   { name: 'TNT', give: [[B.TNT, 3]], cost: 40, icon: B.TNT, about: '3 TNT. Makes a small hole.' },
   { name: 'MEGA TNT', give: [[B.MEGA_TNT, 1]], cost: 150, icon: B.MEGA_TNT, about: 'One HUGE boom!' },
