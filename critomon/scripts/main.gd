@@ -3,7 +3,7 @@ extends Node3D
 ## wild Crito Mon in tall grass, trainers, battles and Connect Four.
 ##
 ## Story: 1) walk to Prof. Birch's Lab, 2) pick EMBERPUP, BUBBLOO or
-## SPROUTLE at the table, 3) JAX challenges you to Connect Four,
+## SPROUTLE at the table, 3) JAX (a show-off) battles you right there,
 ## 4) explore Route 1 (trainers, Connect Four players, wild Crito Mon),
 ## 5) beat JAX at The Arena to become the Route 1 Champion.
 
@@ -124,8 +124,8 @@ func _make_npcs() -> void:
 	_npc({"id": "kid", "title": "KID", "skin": "kid", "gear": {"cap": Color(0.25, 0.55, 0.95), "cap2": Color(0.95, 0.95, 0.3)}, "pos": Vector3(5.5, 0, -2.5), "yaw": PI / 2,
 		"lines": ["Wild Crito Mon hide in the TALL GRASS!", "When a wild Crito Mon is weak, throw a CRITO BALL to catch it!"]})
 	rival = _npc({"id": "rival", "title": "JAX", "skin": "rival", "kind": "rival", "pos": Vector3(0, 0, EXIT_GATE_Z - 0.2), "yaw": PI,
-		"sight": 9.0, "intro": "You made it! Now let's have a REAL Crito Mon battle!",
-		"lose_line": "No way! You beat me! You're the ROUTE 1 CHAMPION!", "after": "I'll train really hard. Next time I'll win!"})
+		"sight": 9.0, "intro": "Finally! Took you long enough, slowpoke. Get ready to lose!",
+		"lose_line": "WHAT?! No way! I can't believe I lost to YOU!", "after": "Hmph. You just got lucky. Next time I'll crush you!"})
 	_npc({"id": "tim", "title": "YOUNGSTER TIM", "skin": "youngster", "gear": {"cap": Color(1.0, 0.8, 0.2), "cap2": Color(0.2, 0.4, 0.9)}, "kind": "mon", "pos": Vector3(12.5, 0, -68), "yaw": PI / 2, "sight": 9.0,
 		"team": [["zappit", 4]], "intro": "Hey, you look new! Let's battle!", "lose_line": "Aww, I lost! You're really good!",
 		"after": "I'm going to train in the tall grass some more.", "reward": {"potion": 1}})
@@ -396,11 +396,11 @@ func _talk_prof() -> void:
 
 func _talk_rival() -> void:
 	if not Game.flag("starter"):
-		await dialog.say("Hey! Wait! It's dangerous to go in the tall grass without a Crito Mon!", rival.title)
-		await dialog.say("My dad, PROFESSOR BIRCH, has some at his lab. Go get one!", rival.title)
+		await dialog.say("Hey, slowpoke! You can't go in the tall grass without a Crito Mon. Everybody knows that!", rival.title)
+		await dialog.say("My dad, PROFESSOR BIRCH, gives them out at his lab. Not that YOU would know what to do with one. Ha!", rival.title)
 	elif Game.flag("champion"):
 		await dialog.say(rival.after, rival.title)
-		var again := await dialog.ask("Want to have a rematch?", ["YES!", "NO"], rival.title)
+		var again := await dialog.ask("Want to lose to me? Rematch!", ["BRING IT!", "NO"], rival.title)
 		if again == 0:
 			await _rival_battle()
 	else:
@@ -505,38 +505,39 @@ func _rival_arrives() -> void:
 	rival.global_position = door + Vector3(0, 0, 1.2)
 	rival.person.rotation.y = 0.0
 	Sfx.play("door")
-	await dialog.say("DAD! I'm here!", "???")
+	await dialog.say("Out of my way! DAD! I'm here!", "???")
 	rig.shot(player.global_position + Vector3(-3.0, 3.0, 5.0), player.global_position + Vector3(0, 1.0, 1.0), 0.8)
 	await rival.walk_to(player.global_position, 2.0)
 	player.face_point(rival.global_position)
-	await dialog.say("Whoa! You got a Crito Mon from my dad? Cool!", rival.title)
-	await dialog.say("I'm JAX. PROFESSOR BIRCH is my dad!", rival.title)
+	await dialog.say("Huh? YOU got a Crito Mon before ME? That's not fair!", rival.title)
+	await dialog.say("I'm JAX. PROFESSOR BIRCH is my dad, so I'm basically the best trainer ever.", rival.title)
 	var mine: String = RIVAL_PICK[Game.flags.starter]
 	var idx := Dex.STARTERS.find(mine)
 	lab.balls[idx].visible = false
 	Game.set_flag("rival_starter", mine)
-	await dialog.say("Then I'll take %s! Dad said I could have one too." % Dex.SPECIES[mine].name, rival.title)
-	await dialog.say("Now let's see who's smarter... I challenge you to CONNECT FOUR!", rival.title)
-	await dialog.say("Drop your RED discs in the board. Get FOUR IN A ROW before JAX does!")
-	var result := await _connect_four(rival, 1, Lab.ORIGIN + Vector3(0, 0, 3.6), Vector3(0, 0, 1))
-	match result:
-		"win":
-			await dialog.say("WHAT?! You got four in a row! You're good at this!", rival.title)
-		"lose":
-			await dialog.say("Ha ha! I win! But you're not bad at all.", rival.title)
-		_:
-			await dialog.say("A draw?! The board is full! Nobody wins!", rival.title)
-	await dialog.say("Next time, let's have a REAL Crito Mon battle!", rival.title)
-	await dialog.say("Meet me at THE ARENA at the end of ROUTE 1. See ya!", rival.title)
+	await dialog.say("Fine. I'll take %s. It's WAY stronger than yours anyway." % Dex.SPECIES[mine].name, rival.title)
+	await dialog.say("Let's battle right now! I'll show you who the real trainer is!", rival.title)
+	# his starter is a level lower and only knows its first moves, so a new
+	# trainer can win; losing this one is fine and the story goes on
+	var result := await _battle([Dex.make(mine, 4)], {"name": rival.title, "skin": rival.skin, "gear": rival.gear, "rival": true}, true)
+	rig.shot(player.global_position + Vector3(-3.0, 3.0, 5.0), player.global_position + Vector3(0, 1.0, 1.0), 0.0)
+	if result == "win":
+		await dialog.say("WHAT?! I picked the wrong Crito Mon! That's the only reason you won!", rival.title)
+		await dialog.say("Whatever. That was just practice.", rival.title)
+	else:
+		await dialog.say("Ha ha! Too easy! Maybe Crito Mon just aren't your thing.", rival.title)
+	await dialog.say("I'm going to THE ARENA at the end of ROUTE 1. Try to keep up, slowpoke!", rival.title)
+	await dialog.say("See ya, wouldn't wanna be ya!", rival.title)
 	await rival.walk_to(Lab.ORIGIN + Lab.EXIT, 0.3, 5.5)
 	Sfx.play("door")
 	rival.visible = false
 	rival.global_position = Vector3(0, 0, -206)
 	rival.person.rotation.y = PI
 	rival.visible = true
+	# (the flag keeps its old name so older saves still load)
 	Game.set_flag("rival_c4")
 	rig.shot(prof.global_position + Vector3(1.5, 2.2, 4.5), prof.global_position + Vector3(0, 1.3, 0), 0.6)
-	await dialog.say("Oh, that JAX! Always in a hurry.", prof.title)
+	await dialog.say("Oh, that JAX! Sorry about him. He can be a real show-off.", prof.title)
 	await dialog.say("Here, take these. They will help you on your adventure!", prof.title)
 	Game.give("ball", 5)
 	Game.give("potion", 3)
@@ -603,7 +604,7 @@ func _rival_battle() -> void:
 	var team := [Dex.make(Game.flags.get("rival_starter", "bubbloo"), 12), Dex.make("zappit", 10), Dex.make("fluffle", 10)]
 	var r := await _battle(team, {"name": rival.title, "skin": rival.skin, "gear": rival.gear, "rival": true})
 	if r == "win":
-		await dialog.say("You're still the champ! I'll get you next time!", rival.title)
+		await dialog.say("Ugh! Lucky AGAIN?! Stop being so good!", rival.title)
 
 
 func _champion() -> void:
@@ -631,7 +632,8 @@ func _wild(grass_index: int) -> void:
 	busy = false
 
 
-func _battle(team: Array, trainer: Dictionary) -> String:
+## keep_going: losing does not send you back to the lab (Jax's first battle).
+func _battle(team: Array, trainer: Dictionary, keep_going := false) -> String:
 	busy = true
 	player.velocity = Vector3.ZERO
 	var back_music := Sfx._music_name
@@ -647,9 +649,11 @@ func _battle(team: Array, trainer: Dictionary) -> String:
 	rig.snap()
 	hud.set_visible_all(true)
 	hud.refresh()
-	if r == "lose":
+	if r == "lose" and not keep_going:
 		await _blackout()
 		return r
+	if r == "lose":
+		Game.heal_all()
 	player.set_partner(Game.lead().sp)
 	Sfx.music(back_music)
 	await hud.fade_in(0.3)
@@ -668,9 +672,7 @@ func _blackout() -> void:
 
 
 ## Play Connect Four next to someone. Returns "win", "lose" or "draw".
-## spot / facing: put the board somewhere fixed (the lab) instead of
-## next to the two players.
-func _connect_four(n: NPC, level: int, spot := Vector3.INF, facing := Vector3.ZERO) -> String:
+func _connect_four(n: NPC, level: int) -> String:
 	await hud.fade_out(0.25)
 	var a := player.global_position
 	var b := n.global_position
@@ -685,9 +687,6 @@ func _connect_four(n: NPC, level: int, spot := Vector3.INF, facing := Vector3.ZE
 	q.exclude = [n.body.get_rid()]
 	if not space.intersect_ray(q).is_empty():
 		side = -side
-	if spot != Vector3.INF:
-		mid = spot + facing * 2.2
-		side = -facing
 	var board := ConnectFourBoard.new()
 	add_child(board)
 	board.scale = Vector3.ONE * 0.62
