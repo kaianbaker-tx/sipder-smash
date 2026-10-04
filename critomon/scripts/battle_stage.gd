@@ -1,7 +1,7 @@
 class_name BattleStage
 extends Builder
 ## The place battles happen: a grassy clearing far from town with two round
-## battle pads. Your Crito Mon stands on the near pad, the other one far.
+## battle pads. Your Crittermon stands on the near pad, the other one far.
 
 const ORIGIN := Vector3(0, 0, 560)
 const MY_PAD := Vector3(-1.9, 0.45, 2.4)

@@ -3,9 +3,9 @@ extends Node3D
 ## Someone in the world: a trainer, a Connect Four player, a helper or just
 ## a friendly face. main.gd decides what happens when you talk to them.
 ##   kind "talk"  - says their lines
-##   kind "mon"   - a Crito Mon trainer (team: [["zappit", 4], ...])
+##   kind "mon"   - a Crittermon trainer (team: [["zappit", 4], ...])
 ##   kind "c4"    - challenges you to Connect Four (c4_level 1..3)
-##   kind "heal"  - heals your Crito Mon
+##   kind "heal"  - heals your Crittermon
 ## Trainers with sight > 0 spot you when you walk in front of them.
 
 var id := ""

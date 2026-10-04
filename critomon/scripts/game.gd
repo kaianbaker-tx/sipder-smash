@@ -10,10 +10,10 @@ const MAX_PARTY := 6
 
 var player_name := "YOU"
 var party: Array = []
-var box: Array = []                 # extra Crito Mon when the party is full
+var box: Array = []                 # extra Crittermon when the party is full
 var bag := {"ball": 0, "potion": 0}
 var flags := {}                     # story progress, beaten trainers
-var seen := {}                      # Crito Dex: species seen / caught
+var seen := {}                      # Critter Dex: species seen / caught
 var caught := {}
 var spawn := {"area": "town", "pos": Vector3(-16, 0, 11.5), "yaw": 0.0}
 var touch_mode := false

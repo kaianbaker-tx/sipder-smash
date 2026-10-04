@@ -1,6 +1,6 @@
 class_name CritterModel
 extends Node3D
-## A Crito Mon built out of round shapes, with cartoon shading and ink
+## A Crittermon built out of round shapes, with cartoon shading and ink
 ## outlines. It bobs, hops, lunges, flashes when hit and fades when it faints.
 ## Faces -Z like everything else in Godot. About 1 metre tall at scale 1.
 
@@ -409,7 +409,7 @@ func faint() -> void:
 		done.emit())
 
 
-## Pop out of a Crito Ball: grow from nothing with a white flash.
+## Pop out of a Critter Ball: grow from nothing with a white flash.
 func appear() -> void:
 	visible = true
 	set_param("fade", 0.0)
@@ -426,7 +426,7 @@ func appear() -> void:
 ## Turn red and shrink into a point (going back into a ball).
 func shrink_to(world_point: Vector3) -> void:
 	var s := scale
-	set_param("flash_color", Color(1.0, 0.3, 0.3))
+	set_param("flash_color", Color(0.4, 1.0, 0.5))
 	var tw := create_tween()
 	tw.tween_method(func(f: float) -> void: set_param("flash", f), 0.0, 1.0, 0.15)
 	tw.tween_property(self, "scale", s * 0.05, 0.25)

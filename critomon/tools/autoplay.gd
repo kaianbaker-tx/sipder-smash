@@ -1,5 +1,5 @@
 extends Node
-## Plays Crito Mon by itself, for testing. Dialogs, battles and Connect Four
+## Plays Crittermon by itself, for testing. Dialogs, battles and Connect Four
 ## go on automatically. Takes a picture every so often with --shots=folder.
 ##   tools/show.sh res://scenes/main.tscn -- --autoplay --shots=/tmp/ap
 ##   --start=route   skip the lab (get EMBERPUP and go straight to Route 1)

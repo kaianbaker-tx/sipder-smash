@@ -1,7 +1,7 @@
 class_name Battle
 extends CanvasLayer
-## A Crito Mon battle: pick FIGHT, BAG, CRITO MON or RUN each turn.
-## Wild Crito Mon can be caught with Crito Balls. Trainers send out their
+## A Crittermon battle: pick FIGHT, BAG, CRITTERMON or RUN each turn.
+## Wild Crittermon can be caught with Critter Balls. Trainers send out their
 ## whole team. Returns "win", "lose", "run" or "caught".
 
 signal _choice(c: Dictionary)
@@ -48,7 +48,7 @@ func _ready() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
-	# the other Crito Mon (top left)
+	# the other Crittermon (top left)
 	foe_box = UI.panel()
 	foe_box.position = Vector2(36, 30)
 	foe_box.custom_minimum_size = Vector2(420, 0)
@@ -66,7 +66,7 @@ func _ready() -> void:
 	fh.add_child(foe_caught)
 	foe_hp = HUD.hp_bar(370)
 	fv.add_child(foe_hp)
-	# your Crito Mon (right, above the menu)
+	# your Crittermon (right, above the menu)
 	my_box = UI.panel()
 	my_box.anchor_left = 1.0
 	my_box.anchor_right = 1.0
@@ -215,14 +215,14 @@ func _send_out(side: String) -> void:
 	await _wait(0.4)
 
 
-## The trainer throws a Crito Ball at a spot. Returns the ball if keep.
-func _throw_anim(person: Person, target: Vector3, keep: bool) -> CritoBall:
+## The trainer throws a Critter Ball at a spot. Returns the ball if keep.
+func _throw_anim(person: Person, target: Vector3, keep: bool) -> CritterBall:
 	var tw := create_tween()
 	tw.tween_property(person, "throw", 1.0, 0.45)
 	tw.tween_property(person, "throw", 0.0, 0.01)
 	await get_tree().create_timer(0.3 if not auto else 0.02).timeout
 	Sfx.play("throw")
-	var ball := CritoBall.new()
+	var ball := CritterBall.new()
 	stage.add_child(ball)
 	var a := person.global_position + Vector3(0, 1.8, 0)
 	ball.global_position = a
@@ -364,7 +364,7 @@ func _choose() -> Dictionary:
 		_buttons([
 			{"text": "FIGHT", "bg": Color(0.95, 0.4, 0.35), "fg": Color.WHITE, "choice": {"kind": "fight"}},
 			{"text": "BAG", "bg": Color(1.0, 0.8, 0.3), "choice": {"kind": "bag"}},
-			{"text": "CRITO MON", "bg": Color(0.45, 0.8, 0.45), "fg": Color.WHITE, "choice": {"kind": "party"}},
+			{"text": "CRITTERMON", "bg": Color(0.45, 0.8, 0.45), "fg": Color.WHITE, "choice": {"kind": "party"}},
 			{"text": "RUN", "bg": Color(0.4, 0.6, 1.0), "fg": Color.WHITE, "choice": {"kind": "run"}},
 		])
 		var c: Dictionary = await _choice
@@ -385,10 +385,10 @@ func _choose() -> Dictionary:
 			"bag":
 				var items := [
 					{"text": "POTION x%d" % Game.bag.get("potion", 0), "off": Game.bag.get("potion", 0) <= 0 or me().hp >= Dex.max_hp(me()), "choice": {"kind": "potion"}},
-					{"text": "CRITO BALL x%d" % Game.bag.get("ball", 0), "off": Game.bag.get("ball", 0) <= 0 or not wild, "choice": {"kind": "ball"}},
+					{"text": "CRITTER BALL x%d" % Game.bag.get("ball", 0), "off": Game.bag.get("ball", 0) <= 0 or not wild, "choice": {"kind": "ball"}},
 					{"text": "BACK", "choice": {"kind": "back"}},
 				]
-				_show_menu(true, "Your bag" if wild else "Your bag (no catching other trainers' Crito Mon!)")
+				_show_menu(true, "Your bag" if wild else "Your bag (no catching other trainers' Crittermon!)")
 				_buttons(items)
 				var c2: Dictionary = await _choice
 				if c2.kind != "back":
@@ -413,7 +413,7 @@ func _pick_party(forced: bool) -> Dictionary:
 		items.append({"text": t, "off": m.hp <= 0 or (i == my_i and not forced) or (i == my_i and me().hp <= 0), "bg": Dex.TYPES[Dex.type_of(m)].color.lightened(0.4), "choice": {"kind": "switch", "index": i}})
 	if not forced:
 		items.append({"text": "BACK", "choice": {"kind": "back"}})
-	_show_menu(true, "Who should battle?" if not forced else "Pick your next Crito Mon!")
+	_show_menu(true, "Who should battle?" if not forced else "Pick your next Crittermon!")
 	_buttons(items)
 	while true:
 		var c: Dictionary = await _choice
@@ -609,7 +609,7 @@ func _check_faint() -> String:
 		await _wait(0.5)
 		await _say("%s fainted!" % Dex.mon_name(me()))
 		if not Game.can_battle():
-			await _say("You have no Crito Mon left that can battle!")
+			await _say("You have no Crittermon left that can battle!")
 			return "lose"
 		var c := {}
 		if auto:
@@ -662,7 +662,7 @@ func _give_xp() -> void:
 
 func _catch() -> String:
 	Game.use_item("ball")
-	await _say("You threw a CRITO BALL!", 0.3)
+	await _say("You threw a CRITTER BALL!", 0.3)
 	var target := foe_model.global_position + Vector3(0, 1.0, 0)
 	var ball := await _throw_anim(my_person, target, true)
 	ball.open()

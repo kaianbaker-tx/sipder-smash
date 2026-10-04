@@ -1,5 +1,5 @@
 extends SceneTree
-## A picture of the battle stage from the battle camera, with two Crito Mon.
+## A picture of the battle stage from the battle camera, with two Crittermon.
 ## tools/show.sh -s res://tools/test/battle_view.gd -- --out=/tmp/b.png --me=emberpup --foe=pebblit
 
 func _initialize() -> void:

@@ -8,6 +8,7 @@ const PAPER := Color(1.0, 0.99, 0.95)
 const RED := Color(0.93, 0.25, 0.25)
 const BLUE := Color(0.25, 0.5, 0.95)
 const GOLD := Color(1.0, 0.82, 0.2)
+const BALL_GREEN := Color(0.18, 0.74, 0.32)
 
 
 static func box_style(bg := PAPER, border := INK, radius := 18, bw := 5) -> StyleBoxFlat:
@@ -73,7 +74,7 @@ static func hp_color(frac: float) -> Color:
 	return Color(0.95, 0.3, 0.25)
 
 
-## Draw a little Crito Ball (for menus).
+## Draw a little Critter Ball (for menus).
 static func draw_ball(ci: CanvasItem, c: Vector2, r: float, empty := false) -> void:
 	ci.draw_circle(c, r + 2.5, INK)
 	if empty:
@@ -84,7 +85,7 @@ static func draw_ball(ci: CanvasItem, c: Vector2, r: float, empty := false) -> v
 	for i in 17:
 		var a := PI + i * PI / 16.0
 		pts.append(c + Vector2(cos(a), sin(a)) * r)
-	ci.draw_colored_polygon(pts, RED)
+	ci.draw_colored_polygon(pts, BALL_GREEN)
 	ci.draw_line(c - Vector2(r, 0), c + Vector2(r, 0), INK, maxf(2.0, r * 0.18))
 	ci.draw_circle(c, r * 0.32, INK)
 	ci.draw_circle(c, r * 0.2, Color(0.98, 0.98, 0.98))

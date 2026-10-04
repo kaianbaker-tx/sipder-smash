@@ -1,7 +1,7 @@
 class_name PauseMenu
 extends CanvasLayer
 ## ESC / TAB / MENU: see your team, use potions, choose who goes first,
-## read your Crito Dex, save, and turn sound on or off.
+## read your Critter Dex, save, and turn sound on or off.
 
 var main: Node
 var root: Control
@@ -96,9 +96,9 @@ func _add_button(text: String, cb: Callable, bg := UI.PAPER, fg := UI.INK) -> Bu
 
 func _home() -> void:
 	_clear("MENU")
-	var first := _add_button("CRITO MON TEAM", _team, Color(0.45, 0.8, 0.45), Color.WHITE)
+	var first := _add_button("CRITTERMON TEAM", _team, Color(0.45, 0.8, 0.45), Color.WHITE)
 	_add_button("BAG", _bag, Color(1.0, 0.8, 0.3))
-	_add_button("CRITO DEX", _dex, Color(0.4, 0.6, 1.0), Color.WHITE)
+	_add_button("CRITTER DEX", _dex, Color(0.4, 0.6, 1.0), Color.WHITE)
 	_add_button("SAVE GAME", _save)
 	_add_button("SOUND: %s" % ("OFF" if Sfx.muted else "ON"), _sound)
 	_add_button("HOW TO PLAY", _help)
@@ -109,7 +109,7 @@ func _home() -> void:
 func _team() -> void:
 	_clear("YOUR TEAM")
 	if Game.party.is_empty():
-		body.add_child(UI.label("No Crito Mon yet! Visit PROF. BIRCH'S LAB.", 30))
+		body.add_child(UI.label("No Crittermon yet! Visit PROF. BIRCH'S LAB.", 30))
 	for i in Game.party.size():
 		var m: Dictionary = Game.party[i]
 		var row := HBoxContainer.new()
@@ -147,7 +147,7 @@ func _team() -> void:
 			_team())
 		row.add_child(pot)
 	if not Game.box.is_empty():
-		body.add_child(UI.label("%d more Crito Mon are resting at the lab." % Game.box.size(), 22))
+		body.add_child(UI.label("%d more Crittermon are resting at the lab." % Game.box.size(), 22))
 	var back := _add_button("BACK", _home)
 	back.grab_focus.call_deferred()
 
@@ -155,13 +155,13 @@ func _team() -> void:
 func _bag() -> void:
 	_clear("BAG")
 	body.add_child(UI.label("POTION  x%d   (heals 20 HP)" % Game.bag.get("potion", 0), 32))
-	body.add_child(UI.label("CRITO BALL  x%d   (catch wild Crito Mon)" % Game.bag.get("ball", 0), 32))
+	body.add_child(UI.label("CRITTER BALL  x%d   (catch wild Crittermon)" % Game.bag.get("ball", 0), 32))
 	body.add_child(UI.label("Use potions from the TEAM page or in battle.", 22))
 	_add_button("BACK", _home).grab_focus.call_deferred()
 
 
 func _dex() -> void:
-	_clear("CRITO DEX  (%d / %d caught)" % [Game.caught.size(), Dex.SPECIES.size()])
+	_clear("CRITTER DEX  (%d / %d caught)" % [Game.caught.size(), Dex.SPECIES.size()])
 	for sp in Dex.SPECIES:
 		var s: Dictionary = Dex.SPECIES[sp]
 		var t := "???"
@@ -198,7 +198,7 @@ func _help() -> void:
 		"TALK / PICK: E, SPACE or ENTER. On a phone: the A button.",
 		"CAMERA: drag with the mouse, or Q and R. Scroll to zoom.",
 		"MENU: ESC or TAB.",
-		"Walk in TALL GRASS to meet wild Crito Mon. Make them weak, then throw a CRITO BALL!",
+		"Walk in TALL GRASS to meet wild Crittermon. Make them weak, then throw a CRITTER BALL!",
 		"FIRE beats GRASS. GRASS beats WATER. WATER beats FIRE.",
 		"CONNECT FOUR: drop discs and get four in a row across, up or slanted!",
 	]

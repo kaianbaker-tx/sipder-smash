@@ -1,5 +1,5 @@
 extends SceneTree
-## Takes a picture of Crito Mon and people for checking how they look.
+## Takes a picture of Crittermon and people for checking how they look.
 ## tools/show.sh -s res://tools/test/view.gd -- --what=critters --out=/tmp/v.png
 
 func _initialize() -> void:

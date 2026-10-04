@@ -1,6 +1,6 @@
 class_name Dex
-## Every Crito Mon, every move, the type chart and the battle maths.
-## A Crito Mon in your party is a Dictionary:
+## Every Crittermon, every move, the type chart and the battle maths.
+## A Crittermon in your party is a Dictionary:
 ##   {"sp": "emberpup", "lv": 5, "xp": 100, "hp": 19, "moves": ["scratch", "growl"]}
 
 const TYPES := {
@@ -133,7 +133,7 @@ static func xp_for(lv: int) -> int:
 	return int(lv * lv * lv * 0.8)
 
 
-## A new Crito Mon with the best moves it knows at that level.
+## A new Crittermon with the best moves it knows at that level.
 static func make(sp: String, lv: int) -> Dictionary:
 	var mon := {"sp": sp, "lv": lv, "xp": xp_for(lv), "hp": 0, "moves": []}
 	var learn: Dictionary = SPECIES[sp].learn
@@ -221,7 +221,7 @@ static func damage(attacker: Dictionary, target: Dictionary, move: String, atk_s
 	return {"damage": maxi(1, int(base)), "mult": mult, "crit": crit}
 
 
-## Chance (0..1) that a Crito Ball catches this wild Crito Mon.
+## Chance (0..1) that a Critter Ball catches this wild Crittermon.
 static func catch_chance(mon: Dictionary) -> float:
 	var mh := float(max_hp(mon))
 	var rate: float = SPECIES[mon.sp].catch

@@ -42,7 +42,7 @@ func play(name: String, pitch_var := 0.0, volume_db := 0.0, pitch := 1.0) -> voi
 	p.play()
 
 
-## A Crito Mon's cry: one sound, pitched for each species.
+## A Crittermon's cry: one sound, pitched for each species.
 func cry(species: String, low := false) -> void:
 	var c: float = Dex.SPECIES.get(species, {}).get("cry", 1.0)
 	play("cry", 0.0, -2.0, c * (0.8 if low else 1.0))
