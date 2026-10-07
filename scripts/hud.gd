@@ -355,6 +355,40 @@ func set_hint_visible(v: bool) -> void:
 
 
 ## A full-screen comic chapter card.
+## "NEW SUIT UNLOCKED!": slides in from the left with the suit's mask.
+func suit_card(title: String, tex: Texture2D, perk: String) -> void:
+	var panel := _caption_box(Color(0.3, 0.95, 1.0), 4)
+	panel.position = Vector2(-560, 190)
+	panel.rotation = -0.03
+	_root.add_child(panel)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 12)
+	panel.add_child(h)
+	# the face of the suit (its mask and eyes) is this corner of the texture
+	var face := AtlasTexture.new()
+	face.atlas = tex
+	var sz := tex.get_size()
+	face.region = Rect2(sz.x * 0.17, sz.y * 0.09, sz.x * 0.3, sz.y * 0.24)
+	var mask := TextureRect.new()
+	mask.texture = face
+	mask.custom_minimum_size = Vector2(118, 94)
+	mask.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mask.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	h.add_child(mask)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", -4)
+	h.add_child(v)
+	v.add_child(_label("NEW SUIT UNLOCKED!", LUCKY, 20, Color(0.08, 0.02, 0.1), 0))
+	v.add_child(_label(title, BANGERS, 46, Color(1, 0.2, 0.55), 0))
+	v.add_child(_label(perk + "  Wear it from PAUSE!", LUCKY, 17, Color(0.08, 0.02, 0.1), 0))
+	var tw := panel.create_tween()
+	tw.tween_property(panel, "position:x", 18.0, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(4.5)
+	tw.tween_property(panel, "position:x", -620.0, 0.3).set_trans(Tween.TRANS_SINE)
+	tw.tween_callback(panel.queue_free)
+	Sfx.play("select")
+
+
 func chapter_card(number: String, title: String) -> void:
 	if _card:
 		_card.queue_free()
