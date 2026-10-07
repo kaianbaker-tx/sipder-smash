@@ -6,6 +6,8 @@ extends Node
 ##   --until=lab     stop after the lab scene
 ##   --start=title   just take a picture of the title screen
 ##   --start=c4bench how long the Connect Four computer thinks
+##   --save --start=makesave --stage=picked|jax   write a save at that moment
+##   --save --start=continue   press CONTINUE and print where you are
 ##   --start=menu    pictures of the pause menu pages
 ##   --start=arena   a strong team walks up to JAX at the Arena
 
@@ -94,6 +96,34 @@ func _run() -> void:
 			var t := Time.get_ticks_usec()
 			var col: int = await c._ai_move(depth, 2)
 			print("AUTOPLAY: depth ", depth, ": ", (Time.get_ticks_usec() - t) / 1000.0, " ms -> column ", col)
+		get_tree().quit(0)
+		return
+	if start == "makesave":
+		# write a save stopped at a story moment, then quit (needs --save)
+		var stage: String = Game.args.get("stage", "picked")
+		Game.new_game()
+		Game.set_flag("met_prof")
+		Game.set_flag("starter", "emberpup")
+		Game.add_mon(Dex.make("emberpup", 5))
+		if stage == "jax":
+			Game.set_flag("rival_starter", "bubbloo")
+			Game.set_flag("rival_c4")
+			Game.party[0].lv = 6
+		main.player.visible = true
+		main._enter_area("lab", Lab.ORIGIN + Lab.TABLE + Vector3(-1.5, 0, 1.7), 0.0)
+		main.save_spot()
+		print("AUTOPLAY: saved at stage ", stage)
+		get_tree().quit(0)
+		return
+	if start == "continue":
+		# press CONTINUE and report where the game picks up
+		await main.begin(false)
+		await idle()
+		await _wait(1.0)
+		shot("continue")
+		print("AUTOPLAY: continue area=", main.area, " pos=", main.player.global_position.round(), " flags=", Game.flags.keys(),
+			" party=", _party_text(), " balls=", Game.bag.ball, " potions=", Game.bag.potion,
+			" jax_at=", main.rival.global_position.round())
 		get_tree().quit(0)
 		return
 	if start == "title":
