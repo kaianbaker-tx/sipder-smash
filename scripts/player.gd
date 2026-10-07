@@ -164,8 +164,8 @@ func _physics_process(delta: float) -> void:
 func _regen(delta: float) -> void:
 	if hp < MAX_HP:
 		_regen_t += delta
-		if _regen_t > (3.5 if Game.suit == "classic" else 5.0):
-			_regen_t = 2.5 if Game.suit == "classic" else 3.5
+		if _regen_t > (3.5 if Game.has_perk("regen") else 5.0):
+			_regen_t = 2.5 if Game.has_perk("regen") else 3.5
 			hp += 1
 			health_changed.emit(hp, MAX_HP)
 
@@ -223,7 +223,7 @@ func _ground(delta: float) -> void:
 func _do_jump() -> void:
 	_jump_buffer = 0.0
 	_coyote = 0.0
-	velocity.y = JUMP
+	velocity.y = JUMP * (1.2 if Game.has_perk("jump") else 1.0)
 	_set_state(State.AIR)
 	model.restart("jump")
 	Sfx.play("jump", 0.1)
@@ -403,7 +403,7 @@ func _swing(delta: float) -> void:
 	var rope := center() - _anchor
 	var rn := rope.normalized()
 	var tang := inp - rn * inp.dot(rn)
-	var pump := SWING_PUMP * (1.3 if Game.suit == "ghost" else 1.0)
+	var pump := SWING_PUMP * (1.3 if Game.has_perk("speed") else 1.0)
 	velocity += tang * pump * delta
 	# natural forward pump: speed up at the bottom of the arc
 	var below := clampf(-rn.y, 0.0, 1.0)
@@ -413,7 +413,7 @@ func _swing(delta: float) -> void:
 	# reel the rope in a bit at the start for a snappy swing
 	if _swing_t < 0.5:
 		_rope = maxf(_rope - 8.0 * delta, 9.0)
-	velocity = velocity.limit_length(MAX_SPEED * (1.15 if Game.suit == "ghost" else 1.0))
+	velocity = velocity.limit_length(MAX_SPEED * (1.15 if Game.has_perk("speed") else 1.0))
 	move_and_slide()
 	# rope constraint
 	var d := center() - _anchor
@@ -771,7 +771,7 @@ var _quip_n := 0
 
 func _hit_enemy(e: Node3D, dmg: int, big: bool) -> void:
 	var dir := (e.global_position - center()).normalized()
-	if Game.suit == "noir":
+	if Game.has_perk("power"):
 		dmg += 1
 	if e.has_method("take_hit"):
 		e.take_hit(dmg, dir, big)
@@ -873,7 +873,7 @@ func respawn(to := Vector3.INF) -> void:
 
 ## Gravity where we are (some dimensions are floaty).
 func _grav() -> float:
-	return area.gravity if area else 1.0
+	return (area.gravity if area else 1.0) * (0.78 if Game.has_perk("float") else 1.0)
 
 
 func _safe_spot() -> Vector3:

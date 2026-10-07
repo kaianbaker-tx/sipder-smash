@@ -86,7 +86,7 @@ func _physics_process(delta: float) -> void:
 			return
 	var to_p := player.center() - global_position
 	var dist := to_p.length()
-	var sight := aggro_range * (0.6 if Game.suit == "midnight" else 1.0)
+	var sight := aggro_range * (0.6 if Game.has_perk("stealth") else 1.0)
 	if not _awake and dist < sight:
 		_awake = true
 		Fx.word("!", global_position + Vector3(0, 2.5, 0), "small", Color(1, 0.9, 0.2))

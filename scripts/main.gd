@@ -147,7 +147,7 @@ func _ready() -> void:
 			match Game.args.get("panel", ""):
 				"suits":
 					title_ui._toggle_suits()
-					title_ui._cycle(1)
+					title_ui._cycle(int(Game.args.get("cycle", "1")))
 				"help":
 					title_ui._help.visible = true
 		else:
@@ -444,6 +444,8 @@ func _wave_progress() -> void:
 			hud.narrate(["The ground is shaking...", "HERE COMES THE GLITCH KING!"], 1.8)
 			get_tree().create_timer(3.4).timeout.connect(_start_boss)
 		else:
+			if chapter >= FIRST_DIM_CHAPTER:
+				_win_suit(chapter - FIRST_DIM_CHAPTER)
 			# the bots came from somewhere... follow them!
 			var next := chapter - FIRST_DIM_CHAPTER + 1
 			get_tree().create_timer(1.6).timeout.connect(func() -> void:
@@ -482,6 +484,15 @@ func _spawn_wave(count: int, big: bool, objective := true, near := Vector3.INF, 
 			objective_bots.append(b)
 	Fx.glitch(0.5)
 	Sfx.play("glitch", 0.1)
+
+
+## Beating every bot in a dimension wins that dimension's suit.
+func _win_suit(i: int) -> void:
+	var key := Suits.for_dim(_dim_name(i))
+	if not Game.unlock_suit(key):
+		return
+	var s: Dictionary = Game.SUITS[key]
+	hud.suit_card(s.name + " SUIT", load(s.tex) as Texture2D, Suits.PERKS[s.perk])
 
 
 ## The last bots were hiding somewhere hard to reach: bring them to the hero.
@@ -842,6 +853,7 @@ func _celebrate(seconds: float) -> void:
 
 
 func _boss_defeated() -> void:
+	_win_suit(_final_dim())
 	hud.set_boss(null)
 	hud.set_objective("")
 	_clear_bots()

@@ -11,6 +11,7 @@ var _main_box: VBoxContainer
 var _suits: Control
 var _help: Control
 var _suit_name: Label
+var _suit_head: Label
 var _suit_desc: Label
 var _wear: Button
 var _suit_keys: Array = []
@@ -71,7 +72,7 @@ func _ready() -> void:
 	sb.pressed.connect(_toggle_suits)
 	row.add_child(sb)
 	var hb := UiKit.button("HOW TO PLAY", 36, Color(0.3, 0.9, 1.0))
-	hb.pressed.connect(func() -> void: _help.visible = not _help.visible; _suits.visible = false)
+	hb.pressed.connect(func() -> void: _help.visible = not _help.visible; _close_suits())
 	row.add_child(hb)
 
 	var credit := UiKit.label("3D art: Kenney.nl (CC0)   Fonts: Bangers & Luckiest Guy (OFL)   Made with Godot", 16, Color(1, 1, 1, 0.85), UiKit.LUCKY, 5)
@@ -110,7 +111,8 @@ func _build_suits(root: Control) -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	_suits.add_child(v)
-	v.add_child(UiKit.label("PICK YOUR SUIT", 34, Color(1, 0.3, 0.55)))
+	_suit_head = UiKit.label("PICK YOUR SUIT", 34, Color(1, 0.3, 0.55))
+	v.add_child(_suit_head)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 14)
@@ -169,12 +171,24 @@ func _build_help(root: Control) -> void:
 		h.add_child(a)
 		h.add_child(UiKit.label(l[1], 22, Color(0.1, 0.02, 0.15), UiKit.LUCKY, 0))
 		v.add_child(h)
-	v.add_child(UiKit.label("Smash the Glitch-Bots, jump through the portals\nto other dimensions, and beat THE GLITCH KING\nin the Glitch-Verse to save the city!", 20, Color(1, 0.3, 0.55), UiKit.LUCKY, 0))
+	v.add_child(UiKit.label("Smash the Glitch-Bots, jump through the portals\nto other dimensions, and beat THE GLITCH KING\nin the Glitch-Verse to save the city!\nBeat every bot in a dimension to win its SUIT!", 20, Color(1, 0.3, 0.55), UiKit.LUCKY, 0))
 
 
 func _toggle_suits() -> void:
-	_suits.visible = not _suits.visible
+	if _suits.visible:
+		_close_suits()
+		return
+	_suits.visible = true
 	_help.visible = false
+	_suit_i = maxi(0, _suit_keys.find(Game.suit))
+	_show_suit()
+
+
+## Hide the picker and put the suit you really wear back on the hero.
+func _close_suits() -> void:
+	if _suits.visible:
+		_suits.visible = false
+		suit_preview.emit(Game.suit)
 
 
 func _cycle(d: int) -> void:
@@ -185,13 +199,19 @@ func _cycle(d: int) -> void:
 func _show_suit() -> void:
 	var key: String = _suit_keys[_suit_i]
 	var s: Dictionary = Game.SUITS[key]
+	_suit_head.text = "PICK YOUR SUIT  %d/%d" % [Game.unlocked_count(), _suit_keys.size()]
 	_suit_name.text = s.name
-	var locked := key == "gold" and not Game.gold_unlocked
-	_suit_desc.text = ("LOCKED! " if locked else "") + s.desc
+	var locked := not Game.is_unlocked(key)
+	var power: String = Suits.PERKS[s.perk]
+	if locked:
+		var how := "Beat the GOLDEN-VERSE or find 25 tokens!" if key == "gold" else "Beat the %s to unlock it!" % s.dim
+		_suit_desc.text = "LOCKED! " + how + "\n" + power
+	else:
+		_suit_desc.text = s.desc + "\n" + power
 	_wear.disabled = locked
-	_wear.text = "WORN!" if key == Game.suit else "WEAR IT!"
-	if not locked:
-		suit_preview.emit(key)
+	_wear.text = "LOCKED" if locked else ("WORN!" if key == Game.suit else "WEAR IT!")
+	# show locked suits too, so you can see what you can win
+	suit_preview.emit(key)
 
 
 func _wear_it() -> void:

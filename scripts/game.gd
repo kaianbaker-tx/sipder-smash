@@ -7,13 +7,8 @@ signal tokens_changed(tokens: int)
 signal suit_changed(suit: String)
 signal message(text: String, seconds: float)
 
-const SUITS := {
-	"classic": {"name": "CLASSIC", "tex": "res://assets/hero/suits/classic.png", "desc": "The one and only! Extra health."},
-	"midnight": {"name": "MIDNIGHT", "tex": "res://assets/hero/suits/midnight.png", "desc": "Stealthy: bots spot you later!"},
-	"ghost": {"name": "GHOST", "tex": "res://assets/hero/suits/ghost.png", "desc": "Hood up. Swings super fast!"},
-	"noir": {"name": "NOIR", "tex": "res://assets/hero/suits/noir.png", "desc": "Black & white world. Hits harder!"},
-	"gold": {"name": "GOLDEN", "tex": "res://assets/hero/suits/gold.png", "desc": "DOUBLE POINTS! Collect 25 tokens to unlock."},
-}
+# every suit (scripts/suits.gd, made by tools/gen_suits.py), in dimension order
+const SUITS := Suits.LIST
 const GOLD_TOKENS := 25
 
 var score := 0
@@ -24,6 +19,7 @@ var token_total := 0
 var bots_smashed := 0
 var suit := "classic"
 var gold_unlocked := false
+var unlocked_suits: Array = ["classic"]   # won by beating their dimension
 var furthest_dim := -1   # the furthest dimension reached (for CONTINUE)
 var mouse_sens := 0.0025
 var invert_y := false
@@ -133,7 +129,7 @@ func reset_run() -> void:
 
 
 func add_score(points: int) -> void:
-	score += points * maxi(1, 1 + combo / 5) * (2 if suit == "gold" else 1)
+	score += points * maxi(1, 1 + combo / 5) * (2 if has_perk("points") else 1)
 	score_changed.emit(score)
 
 
@@ -157,6 +153,35 @@ func add_token() -> void:
 		gold_unlocked = true
 		_save()
 		message.emit("GOLDEN SUIT UNLOCKED!", 3.0)
+
+
+## Is this suit yours to wear?
+func is_unlocked(key: String) -> bool:
+	return key == "classic" or unlocked_suits.has(key) or (key == "gold" and gold_unlocked)
+
+
+## Unlock a suit. Returns true the first time.
+func unlock_suit(key: String) -> bool:
+	if key == "" or not SUITS.has(key) or is_unlocked(key):
+		return false
+	unlocked_suits.append(key)
+	_save()
+	return true
+
+
+func unlocked_count() -> int:
+	var n := 0
+	for k in SUITS:
+		if is_unlocked(k):
+			n += 1
+	return n
+
+
+## Does the suit you wear have this power? (regen, stealth, speed, power,
+## points, float, jump; the Glitch suit has them all)
+func has_perk(p: String) -> bool:
+	var perk: String = SUITS[suit].perk
+	return perk == p or perk == "all"
 
 
 func set_suit(s: String) -> void:
@@ -188,6 +213,7 @@ func _save() -> void:
 	cfg.set_value("game", "invert_y", invert_y)
 	cfg.set_value("game", "mouse_sens", mouse_sens)
 	cfg.set_value("game", "furthest_dim", furthest_dim)
+	cfg.set_value("game", "suits", unlocked_suits)
 	cfg.save("user://spider_smash.cfg")
 
 
@@ -199,5 +225,14 @@ func _load() -> void:
 		invert_y = cfg.get_value("game", "invert_y", false)
 		mouse_sens = cfg.get_value("game", "mouse_sens", 0.0025)
 		furthest_dim = cfg.get_value("game", "furthest_dim", -1)
-	if suit == "gold" and not gold_unlocked:
+		unlocked_suits = cfg.get_value("game", "suits", ["classic"])
+		# older saves: every dimension before the furthest one was beaten,
+		# and a suit you were already wearing stays yours
+		var keys: Array = SUITS.keys()
+		for i in range(maxi(furthest_dim, 0)):
+			if i + 1 < keys.size() and not unlocked_suits.has(keys[i + 1]):
+				unlocked_suits.append(keys[i + 1])
+		if SUITS.has(suit) and not unlocked_suits.has(suit) and (suit != "gold" or gold_unlocked):
+			unlocked_suits.append(suit)
+	if not SUITS.has(suit) or not is_unlocked(suit):
 		suit = "classic"

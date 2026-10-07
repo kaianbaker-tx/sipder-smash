@@ -128,7 +128,7 @@ func _next_suit() -> void:
 	var i := keys.find(Game.suit)
 	for n in keys.size():
 		i = (i + 1) % keys.size()
-		if keys[i] != "gold" or Game.gold_unlocked:
+		if Game.is_unlocked(keys[i]):
 			break
 	Game.set_suit(keys[i])
 	Fx.glitch(1.0)
