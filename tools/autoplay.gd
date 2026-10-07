@@ -47,6 +47,14 @@ func _ready() -> void:
 				[6.0, "quit", ""],
 			]
 			shot_times = [0.9, 1.5, 2.05, 2.45, 2.85, 3.4, 4.1, 4.5, 5.5]
+		"climbtap":
+			# run into a wall, let go right at the bottom
+			timeline = [
+				[0.3, "press", "move_forward"],
+				[float(Game.args.get("let_go", "3.5")), "release", "move_forward"],
+				[7.0, "quit", ""],
+			]
+			shot_times = [3.4, 4.5, 6.5]
 		"climb":
 			timeline = [
 				[0.3, "press", "move_forward"],

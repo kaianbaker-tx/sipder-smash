@@ -534,6 +534,11 @@ func _wall(delta: float) -> void:
 	if is_on_floor() and climb <= 0.0:
 		_set_state(State.GROUND)
 		return
+	# clinging just above the street looks like lying on it: stand back up
+	if climb <= 0.0 and _wall_t > 0.2 and _height_above_ground() < 1.2:
+		_no_wall_t = 0.3
+		_set_state(State.GROUND)
+		return
 	if absf(climb) > 0.1 or absf(lat) > 0.1:
 		model.play("run", 0.1, 1.3)
 	else:
