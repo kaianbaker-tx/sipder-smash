@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Cave Cash</title>
+<meta name="description" content="Mine money in a blocky world. Buy new materials, pickaxes, food and TNT. Get rich!">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="money-box">
+    <div id="money">$0</div>
+  </div>
+  <div id="top-right">
+    <button id="shop-btn" class="btn gold">SHOP <small>B</small></button>
+    <button id="pause-btn" class="btn small" aria-label="Pause">II</button>
+  </div>
+  <div id="badges"></div>
+  <div id="crosshair"></div>
+  <div id="look-label"></div>
+  <div id="held-name"></div>
+  <div id="bars"><div id="hearts"></div><div id="hunger"></div></div>
+  <div id="hotbar"></div>
+  <div id="toasts"></div>
+  <div id="big-text"></div>
+  <div id="water-tint"></div>
+  <div id="hurt-flash"></div>
+  <div id="sleep-fade"><div>Zzz...</div></div>
+</div>
+
+<div id="touch" class="hidden">
+  <div id="stick"><div id="stick-knob"></div></div>
+  <button id="t-mine" class="tbtn">MINE</button>
+  <button id="t-build" class="tbtn">BUILD</button>
+  <button id="t-jump" class="tbtn">JUMP</button>
+  <button id="t-eat" class="tbtn">EAT</button>
+</div>
+
+<div id="title" class="screen">
+  <div class="panel title-panel">
+    <h1 class="logo"><span class="l1">CAVE</span> <span class="l2">CA$H</span></h1>
+    <p class="tag">Mine money. Buy stuff. Get RICH!</p>
+    <div class="pick-save">Pick a save file</div>
+    <div id="slots"></div>
+    <div class="how">
+      <div><b>WASD</b> walk &nbsp; <b>SPACE</b> jump &nbsp; <b>SHIFT</b> run</div>
+      <div><b>HOLD LEFT CLICK</b> mine &nbsp; <b>RIGHT CLICK</b> build</div>
+      <div><b>B</b> shop &nbsp; <b>E</b> inventory &nbsp; <b>1-9</b> or <b>wheel</b> pick a block &nbsp; <b>F</b> eat</div>
+    </div>
+    <p class="tip">A HUGE island to explore. Money Ore is where diamonds would be: dig DEEP in the caves to find it! Watch out for zombies at night. Your game saves by itself.</p>
+    <p id="loading" class="tip">Digging the caves...</p>
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <div class="panel">
+    <h2>PAUSED</h2>
+    <button id="resume-btn" class="btn big green">KEEP PLAYING</button>
+    <div class="row">
+      <button id="save-btn" class="btn gold">SAVE GAME</button>
+      <button id="files-btn" class="btn">SAVE FILES</button>
+    </div>
+    <div class="row">
+      <button id="music-btn" class="btn">MUSIC: ON</button>
+      <button id="jump-btn" class="btn">AUTO-JUMP: ON</button>
+      <button id="view-btn" class="btn">VIEW: FAR</button>
+    </div>
+    <div class="row">
+      <button id="reset-btn" class="btn red">NEW WORLD</button>
+    </div>
+    <div class="how small-how">
+      <div>Explore! Ore in caves and cliffs turns into money. Deeper ore is worth more.</div>
+      <div>Buy new materials, faster pickaxes, food and TNT in the <b>SHOP</b>.</div>
+      <div>Every upgrade costs <b>DOUBLE</b> the one before.</div>
+      <div>Keep your <b>hunger bar</b> full: right-click food or press <b>F</b>. If it runs out, you lose hearts!</div>
+      <div><b>ZOMBIES</b> come out at night. They are scared of lamps. Hit them for money! Sleep in a <b>bed</b> to skip the night.</div>
+      <div>Pigs, cows and chickens give you food. Falling a long way hurts!</div>
+    </div>
+  </div>
+</div>
+
+<div id="dead" class="screen hidden">
+  <div class="panel dead-panel">
+    <h2>YOU DIED!</h2>
+    <p id="dead-why"></p>
+    <p id="dead-lost"></p>
+    <button id="respawn-btn" class="btn big green">RESPAWN</button>
+  </div>
+</div>
+
+<div id="confirm" class="screen hidden">
+  <div class="panel">
+    <h2 id="confirm-title">START OVER?</h2>
+    <p id="confirm-text">Your money and buildings will be gone.</p>
+    <div class="row">
+      <button id="confirm-yes" class="btn red">YES</button>
+      <button id="confirm-no" class="btn green">NO WAY</button>
+    </div>
+  </div>
+</div>
+
+<div id="inventory" class="screen hidden">
+  <div class="panel inv-panel">
+    <div class="shop-head">
+      <h2>INVENTORY</h2>
+      <div class="inv-tip">Click something to hold it</div>
+      <button id="inv-close" class="btn red small" aria-label="Close">X</button>
+    </div>
+    <div id="inv-grid"></div>
+  </div>
+</div>
+
+<div id="shop" class="screen hidden">
+  <div class="panel shop-panel">
+    <div class="shop-head">
+      <h2>SHOP</h2>
+      <div id="shop-money">$0</div>
+      <button id="shop-close" class="btn red small" aria-label="Close">X</button>
+    </div>
+    <button id="x2-btn" class="btn x2"></button>
+    <div class="tabs">
+      <button class="tab" data-tab="ores">MATERIALS</button>
+      <button class="tab" data-tab="picks">PICKAXES</button>
+      <button class="tab" data-tab="food">FOOD</button>
+      <button class="tab" data-tab="boom">BOOM!</button>
+      <button class="tab" data-tab="blocks">BLOCKS</button>
+    </div>
+    <div id="shop-list"></div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

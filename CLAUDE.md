@@ -53,3 +53,24 @@ A Pokemon-style 3D game. It is its own Godot project: run Godot inside
 - Outfits, logo and sounds: `tools/gen_skins.py`, `tools/gen_ui.py`,
   `tools/gen_audio.py`. `tools/check.sh` checks every script.
 - Test it by itself: `godot res://scenes/main.tscn -- --autoplay --start=route`.
+
+## Cave Cash (web game, in `docs/cave-cash/`)
+
+- A blocky mining game like Minecraft. Ore turns into money. Money Ore
+  replaces diamonds (deep, near bedrock). Every upgrade costs double.
+- Plain web files with three.js, not Godot. No build step: edit and push.
+  Once merged to main it is live at `/cave-cash/` on the Pages site.
+- The world is a 512x512 island, 96 tall, sea at 40 (`js/world.js`). The
+  height and biome map is made at the start. Chunk blocks are made when you
+  come near, and 3D shapes only for chunks in view. Biomes: plains, forest,
+  desert, snowy land, mountains. Caves and ore veins are made per chunk.
+- Kaian asked to take out the businesses and THE MINE. The shop opens with B
+  anywhere. There is no town.
+- Prices are in `js/data.js`. Like Minecraft: hearts, hunger and food
+  (`js/game.js`), day and night (`js/daynight.js`), zombies, pigs, cows
+  and chickens (`js/mobs.js`), beds, fall damage, TNT, house kits, inventory
+  on E. Zombies stay away from lamps.
+- Test: run `python3 -m http.server` in `docs/`, open `/cave-cash/`.
+  `window.cave` gives the game to test scripts.
+- Games save in the browser: 3 save files. Saves keep only your changes to
+  the world (`edits`). Saves from the old small world keep money and items.
