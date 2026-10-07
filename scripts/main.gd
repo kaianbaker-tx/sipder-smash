@@ -147,7 +147,7 @@ func _ready() -> void:
 			match Game.args.get("panel", ""):
 				"suits":
 					title_ui._toggle_suits()
-					title_ui._cycle(1)
+					title_ui._cycle(int(Game.args.get("cycle", "1")))
 				"help":
 					title_ui._help.visible = true
 		else:

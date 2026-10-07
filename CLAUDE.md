@@ -28,6 +28,10 @@ what he meant. Short sentences, one idea at a time.
   Only the dimension you are in is kept in memory. CONTINUE on the title
   starts at the furthest dimension reached.
 - `tools/test/verse_view.tscn -- --from=0 --to=49 --out=DIR` renders every verse.
+- Suits: every dimension has one. Beat all its bots to unlock it (the Glitch
+  suit comes from beating the Glitch King). `tools/gen_suits.py` paints them
+  and writes `scripts/suits.gd` (name, dimension, power). Powers are checked
+  with `Game.has_perk()`. `tools/test/suit_lineup.tscn -- --out=DIR` shows them all.
 - Suits, logo, signs and sounds are made by `tools/gen_suits.py`,
   `tools/gen_ui.py` and `tools/gen_audio.py`. Edit those, then re-run them.
 - `tools/check.sh` checks every script. `tools/autoplay.gd` plays the game

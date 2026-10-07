@@ -171,7 +171,7 @@ func _build_help(root: Control) -> void:
 		h.add_child(a)
 		h.add_child(UiKit.label(l[1], 22, Color(0.1, 0.02, 0.15), UiKit.LUCKY, 0))
 		v.add_child(h)
-	v.add_child(UiKit.label("Smash the Glitch-Bots, jump through the portals\nto other dimensions, and beat THE GLITCH KING\nin the Glitch-Verse to save the city!", 20, Color(1, 0.3, 0.55), UiKit.LUCKY, 0))
+	v.add_child(UiKit.label("Smash the Glitch-Bots, jump through the portals\nto other dimensions, and beat THE GLITCH KING\nin the Glitch-Verse to save the city!\nBeat every bot in a dimension to win its SUIT!", 20, Color(1, 0.3, 0.55), UiKit.LUCKY, 0))
 
 
 func _toggle_suits() -> void:
