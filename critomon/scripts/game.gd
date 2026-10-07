@@ -155,13 +155,13 @@ func has_save() -> bool:
 
 
 func save() -> void:
-	if args.has("autoplay"):
+	if args.has("autoplay") and not args.has("save"):
 		return
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f == null:
 		return
 	f.store_var({
-		"v": 1, "name": player_name, "party": party, "box": box, "bag": bag,
+		"v": 2, "name": player_name, "party": party, "box": box, "bag": bag,
 		"flags": flags, "seen": seen, "caught": caught, "spawn": spawn,
 	})
 
@@ -183,6 +183,9 @@ func load_game() -> bool:
 	seen = d.get("seen", {})
 	caught = d.get("caught", {})
 	spawn = d.get("spawn", spawn)
+	# saves from before version 2 got the lab gifts with the Jax flag
+	if d.get("v", 1) < 2 and flags.has("rival_c4"):
+		flags["got_items"] = true
 	party_changed.emit()
 	return true
 

@@ -33,6 +33,7 @@ var _grass_d := 0.0
 var _safe_t := 0.0
 var _target = null               # what E would talk to right now
 var _in_grass := false
+var _autosave_t := 0.0
 
 
 func _ready() -> void:
@@ -151,12 +152,9 @@ func _make_npcs() -> void:
 
 ## Put things where the story says they should be (after loading too).
 func apply_story() -> void:
-	if Game.flag("starter") and not Game.flag("rival_c4"):
-		# the game was saved in the middle of the lab scene: skip ahead
-		Game.set_flag("rival_c4")
-		Game.set_flag("rival_starter", RIVAL_PICK[Game.flags.starter])
-		Game.give("ball", 5)
-		Game.give("potion", 3)
+	if Game.flag("rival_c4") and not Game.flag("got_items"):
+		# saved after Jax's battle but before the professor's gifts
+		_give_lab_items()
 	var has := Game.flag("starter")
 	gate.process_mode = Node.PROCESS_MODE_DISABLED if has else Node.PROCESS_MODE_INHERIT
 	(gate.get_child(0) as CollisionShape3D).disabled = has
@@ -167,7 +165,7 @@ func apply_story() -> void:
 		rival.body.process_mode = Node.PROCESS_MODE_INHERIT
 	for i in 3:
 		var sp: String = Dex.STARTERS[i]
-		var taken: bool = Game.flag("starter") and (Game.flags.starter == sp or RIVAL_PICK[Game.flags.starter] == sp)
+		var taken: bool = Game.flags.get("starter", "") == sp or Game.flags.get("rival_starter", "") == sp
 		lab.balls[i].visible = not taken
 	player.set_partner(Game.lead().get("sp", "") if not Game.lead().is_empty() else "")
 	_update_goal()
@@ -193,6 +191,13 @@ func begin(new_game: bool) -> void:
 	apply_story()
 	await hud.fade_in(0.5)
 	busy = false
+	if not new_game:
+		hud.toast("Welcome back!")
+		if Game.flag("starter") and not Game.flag("rival_c4"):
+			# saved right after picking a starter: Jax shows up now
+			busy = true
+			await _rival_arrives()
+			busy = false
 	if new_game:
 		busy = true
 		await dialog.say("Welcome to the world of CRITTERMON!")
@@ -214,9 +219,21 @@ func _enter_area(a: String, pos: Vector3, yaw: float) -> void:
 	_update_goal()
 
 
-func save_spot() -> void:
+## Save where you are and everything you've done. Called after every
+## battle, every story moment, every 20 seconds of walking, and when the
+## page is hidden or closed.
+func save_spot(show := false) -> void:
+	_autosave_t = 0.0
 	Game.spawn = {"area": area, "pos": player.global_position, "yaw": player.model.rotation.y}
 	Game.save()
+	if show:
+		hud.toast("Game saved!", 1.4)
+
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_CLOSE_REQUEST, NOTIFICATION_APPLICATION_PAUSED]:
+		if player and player.visible:
+			save_spot()
 
 
 # ------------------------------------------------------------------ loop
@@ -228,6 +245,9 @@ func _process(delta: float) -> void:
 		return
 	player.frozen = false
 	_safe_t = maxf(0.0, _safe_t - delta)
+	_autosave_t += delta
+	if _autosave_t > 20.0:
+		save_spot()
 	# music follows where you are
 	if area == "town":
 		Sfx.music("town" if player.global_position.z > -36.0 else "route")
@@ -496,6 +516,7 @@ func _look_at_starter(i: int) -> void:
 	player.set_partner(sp)
 	player.partner.global_position = Vector3(bp.x, 0, bp.z + 1.4)
 	hud.refresh()
+	save_spot(true)
 	await _rival_arrives()
 
 
@@ -520,6 +541,10 @@ func _rival_arrives() -> void:
 	# his starter is a level lower and only knows its first moves, so a new
 	# trainer can win; losing this one is fine and the story goes on
 	var result := await _battle([Dex.make(mine, 4)], {"name": rival.title, "skin": rival.skin, "gear": rival.gear, "rival": true}, true)
+	# you fought Jax: remember it now, so CONTINUE starts after this battle
+	# (the flag keeps its old name so older saves still load)
+	Game.set_flag("rival_c4")
+	save_spot(true)
 	rig.shot(player.global_position + Vector3(-3.0, 3.0, 5.0), player.global_position + Vector3(0, 1.0, 1.0), 0.0)
 	if result == "win":
 		await dialog.say("WHAT?! I picked the wrong Crittermon! That's the only reason you won!", rival.title)
@@ -534,21 +559,25 @@ func _rival_arrives() -> void:
 	rival.global_position = Vector3(0, 0, -206)
 	rival.person.rotation.y = PI
 	rival.visible = true
-	# (the flag keeps its old name so older saves still load)
-	Game.set_flag("rival_c4")
 	rig.shot(prof.global_position + Vector3(1.5, 2.2, 4.5), prof.global_position + Vector3(0, 1.3, 0), 0.6)
 	await dialog.say("Oh, that JAX! Sorry about him. He can be a real show-off.", prof.title)
 	await dialog.say("Here, take these. They will help you on your adventure!", prof.title)
-	Game.give("ball", 5)
-	Game.give("potion", 3)
-	Sfx.play("item")
-	hud.toast("Got 5 CRITTER BALLS and 3 POTIONS!")
+	_give_lab_items()
+	save_spot()
 	await dialog.say("You got 5 CRITTER BALLS and 3 POTIONS!")
 	await dialog.say("Wild Crittermon live in the TALL GRASS on ROUTE 1. Make one weak, then throw a CRITTER BALL to catch it!", prof.title)
 	await dialog.say("Press %s any time to see your team and your bag. Good luck!" % ("MENU" if Game.touch_mode else "ESC or TAB"), prof.title)
 	rig.release()
 	apply_story()
 	save_spot()
+
+
+func _give_lab_items() -> void:
+	Game.give("ball", 5)
+	Game.give("potion", 3)
+	Game.set_flag("got_items")
+	Sfx.play("item")
+	hud.toast("Got 5 CRITTER BALLS and 3 POTIONS!")
 
 
 # ------------------------------------------------------------------ trainers
@@ -595,7 +624,7 @@ func _trainer(n: NPC, spotted: bool) -> void:
 			await dialog.say("%s gave you %d %s%s!" % [n.title, cnt, nice, "S" if cnt > 1 else ""])
 		if n == rival:
 			await _champion()
-		save_spot()
+		save_spot(true)
 	n.busy = false
 	busy = false
 
@@ -658,6 +687,8 @@ func _battle(team: Array, trainer: Dictionary, keep_going := false) -> String:
 	Sfx.music(back_music)
 	await hud.fade_in(0.3)
 	_safe_t = 3.0
+	if not keep_going:
+		save_spot(r == "caught")
 	return r
 
 
